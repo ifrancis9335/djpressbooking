@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title">
+  <title>Corporate Event Atmosphere</title>
+  <rect width="1600" height="1000" fill="#0a1122"/>
+  <rect x="150" y="160" width="1300" height="680" rx="24" fill="#14203a"/>
+  <rect x="250" y="260" width="500" height="420" rx="16" fill="#33b9ff" opacity="0.2"/>
+  <rect x="830" y="260" width="520" height="120" rx="14" fill="#f6c665" opacity="0.38"/>
+  <rect x="830" y="430" width="520" height="120" rx="14" fill="#8e66ff" opacity="0.33"/>
+  <rect x="830" y="600" width="520" height="80" rx="14" fill="#33b9ff" opacity="0.24"/>
+</svg>

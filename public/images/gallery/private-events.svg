@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title">
+  <title>Private Event Atmosphere</title>
+  <rect width="1600" height="1000" fill="#091123" />
+  <path d="M0 800 C300 650, 600 950, 900 760 C1120 620, 1360 760, 1600 680 L1600 1000 L0 1000 Z" fill="#33b9ff" opacity="0.24"/>
+  <path d="M0 900 C250 760, 580 980, 980 840 C1230 750, 1420 820, 1600 780 L1600 1000 L0 1000 Z" fill="#8e66ff" opacity="0.2"/>
+  <circle cx="1220" cy="260" r="180" fill="#f6c665" opacity="0.24"/>
+</svg>

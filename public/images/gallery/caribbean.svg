@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title">
+  <title>Caribbean Event Atmosphere</title>
+  <linearGradient id="c1" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#0f274c"/>
+    <stop offset="100%" stop-color="#082034"/>
+  </linearGradient>
+  <rect width="1600" height="1000" fill="url(#c1)"/>
+  <circle cx="270" cy="180" r="120" fill="#f6c665" opacity="0.7"/>
+  <path d="M0 760 Q250 640 520 760 T1060 760 T1600 760 L1600 1000 L0 1000 Z" fill="#1a8ca6" opacity="0.72"/>
+  <path d="M0 840 Q250 720 520 840 T1060 840 T1600 840 L1600 1000 L0 1000 Z" fill="#0f596d" opacity="0.82"/>
+</svg>

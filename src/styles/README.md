@@ -1,0 +1,1 @@
+This folder is reserved for additional style modules if the design system expands beyond global tokens.
