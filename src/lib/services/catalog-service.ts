@@ -1,8 +1,11 @@
-import { packageAddOns, packageTiers, serviceTypes, testimonials, galleryItems, faqs, serviceArea } from "../../data/catalog";
+import { packageAddOns, serviceTypes, testimonials, galleryItems, faqs } from "../../data/catalog";
+import { getPublicSiteData } from "../site-settings";
 
-export function getCatalogData() {
+export async function getCatalogData() {
+  const { packageTiers, siteContact } = await getPublicSiteData();
+
   return {
-    serviceArea,
+    serviceArea: siteContact.serviceArea,
     serviceTypes,
     packageTiers,
     packageAddOns,

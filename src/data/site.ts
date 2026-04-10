@@ -2,7 +2,8 @@ import { ExperiencePillar, HeroTrustItem, SiteContactInfo } from "../types/catal
 
 export const siteContact: SiteContactInfo = {
   email: "Djpressbookings@gmail.com",
-  phone: "(843) 555-1515",
+  phone: "+1 (843) 312-9965",
+  phoneHref: "tel:+18433129965",
   serviceArea: "Charleston, SC and surrounding areas",
   responseWindow: "Typically within 24 hours",
   bookingCta: {

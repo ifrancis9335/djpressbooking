@@ -1,14 +1,17 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { packageAddOns, packageComparisonRows, packageTiers } from "../../data/catalog";
+import { packageAddOns, packageComparisonRows } from "../../data/catalog";
 import { Reveal } from "../../components/ui/reveal";
+import { getPublicSiteData } from "../../lib/site-settings";
 
 export const metadata: Metadata = {
   title: "Packages",
   description: "Compare Basic, Premium, and Luxury/VIP DJ packages with add-ons."
 };
 
-export default function PackagesPage() {
+export default async function PackagesPage() {
+  const { packageTiers } = await getPublicSiteData();
+
   return (
     <main className="section-shell">
       <div className="container-width">

@@ -9,8 +9,9 @@ import {
 import { bookingSchema } from "../../../lib/validators/booking";
 import { isoDateSchema } from "../../../lib/validators/api";
 import { BookingStatus } from "../../../types/booking";
-import { requireAdminApiKey } from "../../../lib/api-auth";
+import { requireAdminRequest } from "../../../lib/admin-auth";
 import { isFirebaseAdminConfigured } from "../../../lib/firebase";
+import { getSiteSettings } from "../../../lib/site-settings";
 
 const validStatuses: BookingStatus[] = [
   "new",
@@ -22,7 +23,7 @@ const validStatuses: BookingStatus[] = [
 ];
 
 export async function GET(request: Request) {
-  const authError = requireAdminApiKey(request);
+  const authError = requireAdminRequest(request);
   if (authError) {
     return NextResponse.json({ message: authError }, { status: authError === "Unauthorized" ? 401 : 503 });
   }
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const authError = requireAdminApiKey(request);
+  const authError = requireAdminRequest(request);
   if (authError) {
     return NextResponse.json({ message: authError }, { status: authError === "Unauthorized" ? 401 : 503 });
   }
@@ -86,6 +87,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    const siteSettings = await getSiteSettings();
+    if (!siteSettings.booking.enabled) {
+      return NextResponse.json(
+        { message: siteSettings.booking.notice || "Bookings are temporarily paused." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const parsed = bookingSchema.safeParse(body);
 

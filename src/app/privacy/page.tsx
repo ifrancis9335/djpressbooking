@@ -1,12 +1,14 @@
 import { Metadata } from "next";
-import { siteContact } from "../../data/catalog";
+import { getPublicSiteData } from "../../lib/site-settings";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "Privacy policy for DJ Press International booking and contact platform."
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const { siteContact } = await getPublicSiteData();
+
   return (
     <main className="section-shell">
       <div className="container-width">

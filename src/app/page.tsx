@@ -6,13 +6,12 @@ import {
   featuredExperiencePillars,
   galleryItems,
   heroTrustItems,
-  packageTiers,
   serviceTypes,
-  siteContact,
   testimonials
 } from "../data/catalog";
 import { AnimatedCounter } from "../components/ui/animated-counter";
 import { Reveal } from "../components/ui/reveal";
+import { getPublicSiteData } from "../lib/site-settings";
 
 export const metadata: Metadata = {
   title: "Luxury DJ Booking in Charleston",
@@ -20,7 +19,9 @@ export const metadata: Metadata = {
     "Book DJ Press International for weddings, nightlife, and high-impact private events in Charleston and surrounding areas."
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { packageTiers, siteContact, siteSettings } = await getPublicSiteData();
+
   const featuredMediaCards = [
     {
       id: "live-dj-performance",
@@ -47,7 +48,7 @@ export default function HomePage() {
         <div className="container-width hero-luxury grid gap-6 md:grid-cols-[1.05fr_0.95fr] md:items-center">
           <div className="hero-luxury-content">
             <p className="section-kicker border-luxeGold/55 bg-luxeGold/12 text-amber-100">
-              Charleston Luxury DJ Booking
+              {siteSettings.heroSupportText}
             </p>
             <h1 className="hero-luxury-title mt-4">
               Premium DJ Experiences for Weddings, Private Events, and Nightlife
@@ -57,7 +58,7 @@ export default function HomePage() {
               From first dance to final set, every transition is intentional and professionally managed.
             </p>
             <div className="cta-rhythm">
-              <Link href="/booking" className="btn-primary">Book Now</Link>
+              <Link href="/booking" className="btn-primary">{siteSettings.primaryCtaLabel}</Link>
               <Link href="/services" className="btn-secondary">Explore Services</Link>
             </div>
 

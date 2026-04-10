@@ -1,0 +1,34 @@
+{
+  "contact": {
+    "phone": "+1 (843) 312-9965",
+    "phoneHref": "tel:+18433129965",
+    "email": "Djpressbookings@gmail.com",
+    "serviceArea": "Charleston, SC and surrounding areas"
+  },
+  "packages": {
+    "basic": {
+      "name": "Basic",
+      "startingAt": "$350",
+      "ctaLabel": "Book Basic"
+    },
+    "premium": {
+      "name": "Premium",
+      "startingAt": "$500",
+      "ctaLabel": "Book Premium"
+    },
+    "vip": {
+      "name": "Luxury / VIP",
+      "startingAt": "$1,200",
+      "ctaLabel": "Book VIP"
+    }
+  },
+  "booking": {
+    "enabled": true,
+    "notice": ""
+  },
+  "site": {
+    "primaryCtaLabel": "Book Now",
+    "heroSupportText": "Charleston Luxury DJ Booking",
+    "serviceAreaLine": "Charleston, SC and surrounding areas"
+  }
+}

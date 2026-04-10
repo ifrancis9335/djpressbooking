@@ -80,6 +80,7 @@ export interface FaqItem {
 export interface SiteContactInfo {
   email: string;
   phone: string;
+  phoneHref: string;
   serviceArea: string;
   responseWindow: string;
   bookingCta: {

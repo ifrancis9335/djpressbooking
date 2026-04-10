@@ -1,14 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
-import { siteContact } from "../../data/catalog";
+import { getPublicSiteData } from "../../lib/site-settings";
 
 export const metadata: Metadata = {
   title: "About DJ Press International",
   description: "Learn the story behind DJ Press International and its premium event philosophy."
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const { siteContact } = await getPublicSiteData();
+
   return (
     <main className="section-shell">
       <div className="container-width grid gap-5 md:grid-cols-[0.95fr_1.05fr] md:items-stretch">

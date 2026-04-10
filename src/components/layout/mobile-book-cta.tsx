@@ -1,9 +1,13 @@
 import Link from "next/link";
 
-export function MobileBookCta() {
+interface MobileBookCtaProps {
+  label: string;
+}
+
+export function MobileBookCta({ label }: MobileBookCtaProps) {
   return (
     <Link href="/booking" className="btn-primary sticky-book">
-      Book DJ Press Now
+      {label}
     </Link>
   );
 }

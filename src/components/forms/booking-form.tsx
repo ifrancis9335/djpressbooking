@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { BookingRequest } from "../../types/booking";
 import { parseJson } from "../../utils/api";
-import { packageAddOns, packageTiers } from "../../data/catalog";
+import { packageAddOns } from "../../data/catalog";
+import { PublicSiteData } from "../../types/site-settings";
+import { usePublicSiteData } from "../../hooks/use-public-site-data";
 
 const initialState: BookingRequest = {
   fullName: "",
@@ -31,7 +33,11 @@ const initialState: BookingRequest = {
   specialNotes: ""
 };
 
-export function BookingForm() {
+interface BookingFormProps {
+  initialPublicData: PublicSiteData;
+}
+
+export function BookingForm({ initialPublicData }: BookingFormProps) {
   const [form, setForm] = useState<BookingRequest>(initialState);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<{ kind: "ok" | "bad"; text: string } | null>(null);
@@ -40,10 +46,15 @@ export function BookingForm() {
   const formRef = useRef<HTMLFormElement | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: publicData } = usePublicSiteData(initialPublicData);
+
+  const packageTiers = publicData?.packageTiers ?? initialPublicData.packageTiers;
+  const siteContact = publicData?.siteContact ?? initialPublicData.siteContact;
+  const bookingSettings = publicData?.bookingSettings ?? initialPublicData.bookingSettings;
 
   const selectedPackage = useMemo(
     () => packageTiers.find((tier) => tier.id === form.packageId),
-    [form.packageId]
+    [form.packageId, packageTiers]
   );
 
   const steps = useMemo(
@@ -73,7 +84,7 @@ export function BookingForm() {
     const exists = packageTiers.some((tier) => tier.id === preselected);
     if (!exists) return;
     setForm((prev) => (prev.packageId ? prev : { ...prev, packageId: preselected }));
-  }, [searchParams]);
+  }, [searchParams, packageTiers]);
 
   useEffect(() => {
     const selectedDate = searchParams.get("date");
@@ -183,18 +194,27 @@ export function BookingForm() {
       return;
     }
 
+    if (!bookingSettings.enabled) {
+      setStatus({
+        kind: "bad",
+        text: bookingSettings.notice || "Bookings are temporarily paused. Please contact us directly."
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const availabilityResponse = await fetch(`/api/availability?date=${encodeURIComponent(form.eventDate)}`, {
         cache: "no-store"
       });
-      const availabilityPayload = await parseJson<{ record?: { status?: string } }>(availabilityResponse);
-      const selectedStatus = availabilityPayload.record?.status ?? "available";
+      const availabilityPayload = await parseJson<{ available?: boolean; status?: string }>(availabilityResponse);
+      const selectedStatus = availabilityPayload.status ?? "available";
+      const isAvailable = availabilityPayload.available ?? selectedStatus === "available";
 
-      if (selectedStatus !== "available") {
+      if (!isAvailable) {
         setStatus({
           kind: "bad",
-          text: selectedStatus === "pending" ? "Selected date is awaiting confirmation." : "Selected date is unavailable."
+          text: selectedStatus === "pending" ? "Date not available: awaiting confirmation." : "Date not available."
         });
         return;
       }
@@ -390,6 +410,10 @@ export function BookingForm() {
           ) : null}
         </div>
 
+        {!bookingSettings.enabled ? (
+          <p className="status-bad mt-4">{bookingSettings.notice || "Bookings are temporarily paused. Please check back soon."}</p>
+        ) : null}
+
         {status ? <p className={`mt-4 ${status.kind === "ok" ? "status-ok" : "status-bad"}`}>{status.text}</p> : null}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between">
@@ -401,8 +425,8 @@ export function BookingForm() {
               <button type="button" className="btn-primary" onClick={nextStep}>Continue</button>
             ) : null}
             {step === steps.length - 1 ? (
-              <button disabled={loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-60" type="submit">
-                {loading ? "Submitting..." : "Submit Booking Inquiry"}
+              <button disabled={loading || !bookingSettings.enabled} className="btn-primary disabled:cursor-not-allowed disabled:opacity-60" type="submit">
+                {!bookingSettings.enabled ? "Booking Paused" : loading ? "Submitting..." : "Submit Booking Inquiry"}
               </button>
             ) : null}
           </div>
@@ -415,6 +439,9 @@ export function BookingForm() {
       <aside className="glass-panel h-fit p-5 md:sticky md:top-24">
         <h3 className="text-lg font-bold text-white">Booking Summary</h3>
         <p className="mt-1 text-sm text-slate-300">Live snapshot of your inquiry details.</p>
+        <p className="mt-2 text-sm text-slate-300">
+          Need quick help? <a className="font-semibold text-luxeGold" href={siteContact.phoneHref}>{siteContact.phone}</a>
+        </p>
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
           <dt className="text-slate-400">Name</dt><dd className="text-slate-100">{form.fullName || "-"}</dd>
           <dt className="text-slate-400">Event</dt><dd className="text-slate-100">{form.eventType || "-"}</dd>

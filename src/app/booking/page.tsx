@@ -2,13 +2,16 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { Suspense } from "react";
 import { BookingForm } from "../../components/forms/booking-form";
+import { getPublicSiteData } from "../../lib/site-settings";
 
 export const metadata: Metadata = {
   title: "Book DJ Press International",
   description: "Submit a full booking inquiry for weddings, nightlife, and premium events in Charleston."
 };
 
-export default function BookingPage() {
+export default async function BookingPage() {
+  const initialPublicData = await getPublicSiteData();
+
   return (
     <main className="section-shell">
       <div className="container-width">
@@ -24,7 +27,7 @@ export default function BookingPage() {
         </div>
         <div className="mt-6">
           <Suspense fallback={<div className="glass-panel p-6 text-sm text-slate-300">Loading booking form...</div>}>
-            <BookingForm />
+            <BookingForm initialPublicData={initialPublicData} />
           </Suspense>
         </div>
 

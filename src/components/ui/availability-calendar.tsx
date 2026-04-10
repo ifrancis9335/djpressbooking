@@ -1,26 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { AvailabilityDate } from "../../types/availability";
 import { cn } from "../../utils/cn";
-import { firebaseDb, isFirebaseClientConfigured } from "../../lib/firebase/client";
 
 const week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-interface FirestoreBookingDate {
-  date: string;
-  status: AvailabilityDate["status"];
-  note?: string;
-  bookingId?: string;
-}
 
 function formatIsoDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatMonthIso(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
+  if (!response.ok) {
+    const message = payload && typeof payload === "object" && "message" in payload ? payload.message : undefined;
+    throw new Error(message || "Unable to load availability data.");
+  }
+  return payload as T;
 }
 
 export function AvailabilityCalendar() {
@@ -32,50 +36,37 @@ export function AvailabilityCalendar() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isFirebaseClientConfigured || !firebaseDb) {
-      setLoadError("Calendar is not configured yet. Please set Firebase environment variables.");
-      setLoading(false);
-      return;
-    }
+  const refreshAvailability = useCallback(async () => {
+    const month = formatMonthIso(monthDate);
+    const availabilityPayload = await fetch(`/api/availability?month=${month}`, { cache: "no-store" }).then((response) =>
+      parseResponse<{ availability?: AvailabilityDate[] }>(response)
+    );
 
-    const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-    const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-    const start = formatIsoDate(firstDay);
-    const end = formatIsoDate(lastDay);
+    setAvailability(availabilityPayload.availability ?? []);
+  }, [monthDate]);
+
+  useEffect(() => {
+    let active = true;
 
     setLoading(true);
-
-    const bookingsQuery = query(
-      collection(firebaseDb, "availability"),
-      where("date", ">=", start),
-      where("date", "<=", end),
-      orderBy("date", "asc")
-    );
-    const unsubscribe = onSnapshot(
-      bookingsQuery,
-      (snapshot) => {
-        const next = snapshot.docs
-          .map((doc) => doc.data() as FirestoreBookingDate)
-          .filter((entry) => Boolean(entry.date) && Boolean(entry.status))
-          .map((entry) => ({
-            date: entry.date,
-            status: entry.status,
-            note: entry.note
-          }));
-
-        setAvailability(next);
+    refreshAvailability()
+      .then(() => {
+        if (!active) return;
         setLoadError(null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setLoadError(error instanceof Error ? error.message : "Unable to load calendar data.");
+      })
+      .finally(() => {
+        if (!active) return;
         setLoading(false);
-      },
-      () => {
-        setLoadError("Unable to load calendar data.");
-        setLoading(false);
-      }
-    );
+      });
 
-    return () => unsubscribe();
-  }, [monthDate]);
+    return () => {
+      active = false;
+    };
+  }, [refreshAvailability]);
 
   const availabilityMap = useMemo(() => {
     const map = new Map<string, AvailabilityDate>();

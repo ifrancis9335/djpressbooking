@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createContactMessage, getContactMessages } from "../../../lib/services/contact-service";
 import { contactSchema } from "../../../lib/validators/contact";
-import { requireAdminApiKey } from "../../../lib/api-auth";
+import { requireAdminRequest } from "../../../lib/admin-auth";
 
 export async function GET(request: Request) {
-  const authError = requireAdminApiKey(request);
+  const authError = requireAdminRequest(request);
   if (authError) {
     return NextResponse.json({ message: authError }, { status: authError === "Unauthorized" ? 401 : 503 });
   }

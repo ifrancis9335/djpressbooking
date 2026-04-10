@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Metadata } from "next";
-import { packageTiers } from "../../data/catalog";
+import { getPublicSiteData } from "../../lib/site-settings";
 
 export const metadata: Metadata = {
   title: "Thank You",
@@ -12,6 +12,7 @@ export default async function ThankYouPage({
 }: {
   searchParams: Promise<{ bookingId?: string; date?: string; package?: string }>;
 }) {
+  const { packageTiers } = await getPublicSiteData();
   const params = await searchParams;
   const bookingId = params.bookingId || "Pending Assignment";
   const selectedDate = params.date || "Date pending confirmation";
