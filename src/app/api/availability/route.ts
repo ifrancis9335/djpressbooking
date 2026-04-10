@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAvailabilityByDate, getAvailabilityForMonth } from "../../../lib/availability";
+import { getAvailabilityForMonth } from "../../../lib/availability";
 import { isoDateSchema, monthSchema } from "../../../lib/validators/api";
 import { isFirebaseAdminConfigured } from "../../../lib/firebase";
-import { getUnavailableDates } from "../../../lib/unavailable-dates";
+import { getBlockedDateByEventDate, listBlockedDates, listBlockedDatesForMonth } from "../../../lib/availability-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,16 +12,17 @@ function monthFromNow() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function toMonthPrefix(monthIso: string) {
-  return `${monthIso}-`;
-}
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month");
     const date = searchParams.get("date");
-    const unavailableDates = await getUnavailableDates();
+    const list = searchParams.get("list");
+
+    if (list === "blocked") {
+      const blockedDates = await listBlockedDates();
+      return NextResponse.json({ blockedDates });
+    }
 
     if (date) {
       const parsedDate = isoDateSchema.safeParse(date);
@@ -29,34 +30,18 @@ export async function GET(request: Request) {
         return NextResponse.json({ message: "Invalid date query. Use YYYY-MM-DD." }, { status: 400 });
       }
 
-      if (unavailableDates.includes(date)) {
+      const blockedRecord = await getBlockedDateByEventDate(date);
+
+      if (blockedRecord?.status === "blocked") {
         return NextResponse.json({
           available: false,
           status: "blocked",
-          record: {
-            date,
-            status: "blocked",
-            note: "Blocked by admin",
-            updatedAt: new Date().toISOString()
-          }
+          source: "postgres",
+          blockedDate: blockedRecord
         });
       }
 
-      if (!isFirebaseAdminConfigured()) {
-        return NextResponse.json({
-          available: true,
-          status: "available",
-          record: {
-            date,
-            status: "available",
-            updatedAt: new Date().toISOString()
-          }
-        });
-      }
-
-      const record = await getAvailabilityByDate(date);
-      const available = record.status === "available";
-      return NextResponse.json({ available, status: record.status, record });
+      return NextResponse.json({ available: true, status: "available", source: "postgres" });
     }
 
     const parsedMonth = monthSchema.safeParse(month ?? undefined);
@@ -66,17 +51,16 @@ export async function GET(request: Request) {
 
     const selectedMonth = parsedMonth.data ?? monthFromNow();
     const availability = isFirebaseAdminConfigured() ? await getAvailabilityForMonth(selectedMonth) : [];
+    const blockedByMonth = await listBlockedDatesForMonth(selectedMonth);
 
     const availabilityMap = new Map(availability.map((record) => [record.date, record]));
-    const blockedByConfig = unavailableDates.filter((value) => value.startsWith(toMonthPrefix(selectedMonth)));
-
-    blockedByConfig.forEach((blockedDate) => {
-      const current = availabilityMap.get(blockedDate);
+    blockedByMonth.forEach((blockedDate) => {
+      const current = availabilityMap.get(blockedDate.eventDate);
       if (!current || current.status === "available") {
-        availabilityMap.set(blockedDate, {
-          date: blockedDate,
+        availabilityMap.set(blockedDate.eventDate, {
+          date: blockedDate.eventDate,
           status: "blocked",
-          note: "Blocked by admin",
+          note: blockedDate.note || "Blocked by admin",
           updatedAt: new Date().toISOString()
         });
       }

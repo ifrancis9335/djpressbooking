@@ -214,7 +214,7 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
       if (!isAvailable) {
         setStatus({
           kind: "bad",
-          text: selectedStatus === "pending" ? "Date not available: awaiting confirmation." : "Date not available."
+          text: selectedStatus === "pending" ? "Date not available: awaiting confirmation." : "Date not available"
         });
         return;
       }

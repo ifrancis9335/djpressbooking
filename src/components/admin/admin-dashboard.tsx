@@ -11,6 +11,15 @@ interface DashboardSummary {
   bookingEnabled: boolean;
 }
 
+interface BlockedDateEntry {
+  id: number;
+  eventDate: string;
+  status: "blocked" | "available";
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const defaultSettings: SiteSettings = {
   contact: {
     phone: "",
@@ -52,8 +61,9 @@ export function AdminDashboard() {
 
   const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDateEntry[]>([]);
   const [newBlockedDate, setNewBlockedDate] = useState("");
+  const [newBlockedNote, setNewBlockedNote] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [blockedLoading, setBlockedLoading] = useState(false);
@@ -76,14 +86,14 @@ export function AdminDashboard() {
       const [settingsPayload, summaryPayload, blockedPayload] = await Promise.all([
         fetch("/api/admin/settings", { cache: "no-store" }).then((res) => parseResponse<{ settings: SiteSettings }>(res)),
         fetch("/api/admin/dashboard", { cache: "no-store" }).then((res) => parseResponse<{ summary: DashboardSummary }>(res)),
-        fetch("/api/admin/blocked-dates", { cache: "no-store" }).then((res) =>
-          parseResponse<{ unavailableDates: string[] }>(res)
+        fetch("/api/availability?list=blocked", { cache: "no-store" }).then((res) =>
+          parseResponse<{ blockedDates: BlockedDateEntry[] }>(res)
         )
       ]);
 
       setSettings(settingsPayload.settings);
       setSummary(summaryPayload.summary);
-      setBlockedDates(blockedPayload.unavailableDates);
+      setBlockedDates(blockedPayload.blockedDates);
       setAuthenticated(true);
       setAuthError(null);
     } catch (error) {
@@ -181,15 +191,16 @@ export function AdminDashboard() {
     setBlockedMessage(null);
 
     try {
-      const response = await fetch("/api/admin/blocked-dates", {
+      const response = await fetch("/api/admin/availability/block", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: newBlockedDate })
+        body: JSON.stringify({ date: newBlockedDate, note: newBlockedNote })
       });
-      const payload = await parseResponse<{ unavailableDates: string[]; message: string }>(response);
-      setBlockedDates(payload.unavailableDates);
+      const payload = await parseResponse<{ blockedDate: BlockedDateEntry; message: string }>(response);
+      setBlockedDates((prev) => [...prev.filter((item) => item.eventDate !== payload.blockedDate.eventDate), payload.blockedDate].sort((a, b) => a.eventDate.localeCompare(b.eventDate)));
       setBlockedMessage(payload.message);
       setNewBlockedDate("");
+      setNewBlockedNote("");
       await loadDashboard();
     } catch (error) {
       setBlockedError(error instanceof Error ? error.message : "Unable to block date");
@@ -204,11 +215,13 @@ export function AdminDashboard() {
     setBlockedMessage(null);
 
     try {
-      const response = await fetch(`/api/admin/blocked-dates?date=${encodeURIComponent(date)}`, {
-        method: "DELETE"
+      const response = await fetch("/api/admin/availability/unblock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date })
       });
-      const payload = await parseResponse<{ unavailableDates: string[]; message: string }>(response);
-      setBlockedDates(payload.unavailableDates);
+      const payload = await parseResponse<{ message: string }>(response);
+      setBlockedDates((prev) => prev.filter((entry) => entry.eventDate !== date));
       setBlockedMessage(payload.message);
       await loadDashboard();
     } catch (error) {
@@ -287,31 +300,38 @@ export function AdminDashboard() {
 
       <section id="blocked-dates" className="glass-panel p-5 md:p-6">
         <h3 className="text-xl font-bold text-white">Blocked Dates Manager</h3>
-        <p className="mt-1 text-sm text-slate-300">Manage unavailable dates used by the booking availability API.</p>
-        <div className="mt-3 flex flex-col gap-3 md:flex-row">
+        <p className="mt-1 text-sm text-slate-300">Manage live blocked dates saved in Postgres.</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-[260px_1fr_auto]">
+          <input type="date" className="field-input" value={newBlockedDate} onChange={(event) => setNewBlockedDate(event.target.value)} />
           <input
-            type="date"
-            className="field-input md:w-[260px]"
-            value={newBlockedDate}
-            onChange={(event) => setNewBlockedDate(event.target.value)}
+            type="text"
+            className="field-input"
+            value={newBlockedNote}
+            onChange={(event) => setNewBlockedNote(event.target.value)}
+            placeholder="Optional note"
+            maxLength={160}
           />
           <button type="button" className="btn-primary md:w-auto" onClick={addBlockedDate} disabled={blockedLoading}>
             {blockedLoading ? "Saving..." : "Add Blocked Date"}
           </button>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 grid gap-2">
           {blockedDates.length === 0 ? <p className="text-sm text-slate-400">No blocked dates configured.</p> : null}
-          {blockedDates.map((date) => (
-            <button
-              key={date}
-              type="button"
-              className="rounded-full border border-slate-500/40 bg-slate-700/30 px-3 py-1 text-xs font-semibold text-slate-200"
-              onClick={() => removeBlockedDate(date)}
-              disabled={blockedLoading}
-              title="Remove blocked date"
-            >
-              {date}
-            </button>
+          {blockedDates.map((blocked) => (
+            <div key={blocked.id} className="flex flex-col gap-2 rounded-xl border border-slate-500/35 bg-slate-800/40 p-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-100">{blocked.eventDate}</p>
+                <p className="text-xs text-slate-400">{blocked.note || "No note"}</p>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary md:w-auto"
+                onClick={() => removeBlockedDate(blocked.eventDate)}
+                disabled={blockedLoading}
+              >
+                {blockedLoading ? "Saving..." : "Mark Available"}
+              </button>
+            </div>
           ))}
         </div>
         {blockedMessage ? <p className="status-ok mt-3">{blockedMessage}</p> : null}

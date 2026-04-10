@@ -108,7 +108,7 @@ export function AvailabilityCalendar() {
     }
 
     if (cell.status === "booked" || cell.status === "blocked") {
-      setStatusMessage("Unavailable");
+      setStatusMessage("Date not available");
     }
   };
 

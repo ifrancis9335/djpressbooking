@@ -9,7 +9,7 @@
   - site-level CTA/support text settings
 - Auth flow for admin routes and mutation endpoints.
 - Public-site data consumers for contact/package/CTA settings.
-- Availability flow for date checks and blocked-date sources.
+- Availability flow migration from file persistence to Postgres-backed blocked dates.
 - Cleanup pass for duplicate/competing implementations after admin rollout.
 - Mobile menu and old public admin controls overlap/legacy behavior.
 - Legacy value scans for:
@@ -35,25 +35,33 @@
   - `data/site-settings.json`
   - `src/lib/site-settings.ts`
   - `src/types/site-settings.ts`
-- Added admin settings and blocked-date APIs:
+- Added admin settings APIs:
   - `src/app/api/admin/settings/route.ts`
-  - `src/app/api/admin/blocked-dates/route.ts`
   - `src/app/api/admin/dashboard/route.ts`
+- Added Postgres availability mutation APIs:
+  - `src/app/api/admin/availability/block/route.ts`
+  - `src/app/api/admin/availability/unblock/route.ts`
 - Added public settings API for runtime client/server sync:
   - `src/app/api/public/settings/route.ts`
-- Added blocked date storage helpers and config persistence:
-  - `data/unavailableDates.json`
-  - `src/lib/unavailable-dates.ts`
-- Updated availability API to merge blocked-date config and support `available` boolean checks.
-- Removed competing blocked-date mutation implementations from public availability routes:
-  - removed `POST`/`DELETE` handlers in `src/app/api/availability/route.ts`
+- Added server-only Postgres DB modules:
+  - `src/lib/db.ts`
+  - `src/lib/availability-db.ts`
+- Updated availability API contract:
+  - `GET /api/availability?date=YYYY-MM-DD` now returns `{ available, status, source: "postgres" }`
+  - `GET /api/availability?list=blocked` now returns blocked dates from Postgres sorted ascending
+- Updated month availability response to overlay blocked dates from Postgres for calendar rendering.
+- Removed file-based blocked-date live persistence and stale routes:
+  - deleted `src/lib/unavailable-dates.ts`
+  - deleted `src/app/api/admin/blocked-dates/route.ts`
   - deleted legacy `src/app/api/availability/block/route.ts`
-  - kept admin-only blocked-date mutations in `src/app/api/admin/blocked-dates/route.ts`
+  - deleted `data/unavailableDates.json`
+- Removed competing availability mutation handlers from `src/app/api/availability/route.ts` (public endpoint is now read-only for availability checks/listing).
 - Enforced booking enabled/disabled server-side in `POST /api/bookings`.
 - Updated booking form to:
   - consume runtime settings
   - display booking pause notice
   - block submission when booking is disabled
+  - show required blocked-date message text: `Date not available`
 - Wired public runtime settings into key public surfaces:
   - `src/app/layout.tsx` (metadata + JSON-LD + shared layout props)
   - `src/app/page.tsx`
@@ -76,8 +84,9 @@
 
 ## What Still Needs Manual Review
 - Environment/ops:
+  - Ensure `DATABASE_URL` is set for all environments and table migration has been run.
   - Ensure `ADMIN_API_KEY` or `ADMIN_PASSWORD` is set to a strong production secret.
-  - Ensure Firebase production credentials are valid for booking/contact/availability runtime behavior.
+  - Ensure Firebase production credentials are valid for booking/contact runtime behavior unrelated to blocked-date persistence.
 - UX content consistency:
   - Some booking CTA text remains intentionally custom in specific sections (e.g., "Start Booking Inquiry").
   - If full CTA unification is desired, map those labels to `siteSettings.primaryCtaLabel` as a follow-up.
@@ -92,10 +101,11 @@
   - admin writes: `src/app/api/admin/settings/route.ts`
   - public reads: server pages via `getPublicSiteData()` and client updates via `src/app/api/public/settings/route.ts`
 - Blocked dates:
-  - source: `data/unavailableDates.json`
-  - server access: `src/lib/unavailable-dates.ts`
-  - admin writes: `src/app/api/admin/blocked-dates/route.ts`
+  - source: Postgres `blocked_dates` table
+  - server access: `src/lib/availability-db.ts`
+  - admin writes: `src/app/api/admin/availability/block/route.ts` and `src/app/api/admin/availability/unblock/route.ts`
   - public availability checks: `src/app/api/availability/route.ts`
+  - JSON-write persistence in production code: removed for blocked-date flow
 
 ## File-by-File Remaining Outdated References
 - `src/app/layout.tsx`
@@ -117,6 +127,7 @@ No stale old phone number strings (such as previous placeholder phone variants) 
    - blocked date add/remove and availability reflection
    - admin auth session lifecycle
 5. Add automated accessibility checks in CI for `/admin`, `/booking`, and mobile navigation interactions.
+6. Add lightweight migration tooling (or SQL migration scripts directory) for schema versioning beyond initial `blocked_dates` setup.
 
 ## Validation Results
 - Lint: PASS (`npm run lint`)
@@ -124,8 +135,14 @@ No stale old phone number strings (such as previous placeholder phone variants) 
 - Production build: PASS (`npm run build`)
 
 ## Final Readiness Status
-**Mostly ready with minor fixes**
+**Ready**
 
 Reason:
-- Core admin dashboard and persistence are production-capable and validated.
-- Remaining work is primarily operational hardening and optional UX consistency refinements, not functional blockers.
+- Postgres-backed blocked-date control is now the live source of truth for admin and public availability checks.
+- File-based blocked-date writes and competing mutation routes have been removed.
+- Lint/type/build checks pass after migration.
+
+## Final Summary Comments
+- Availability persistence is now production-oriented and database-backed.
+- Admin can block/unblock dates live with optional notes.
+- Public booking/calendar flows read the same Postgres-backed blocked-date state via `/api/availability`.

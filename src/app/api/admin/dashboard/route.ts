@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminRequest } from "../../../../lib/admin-auth";
-import { getUnavailableDates } from "../../../../lib/unavailable-dates";
+import { listBlockedDates } from "../../../../lib/availability-db";
 import { getSiteSettings } from "../../../../lib/site-settings";
 
 export const runtime = "nodejs";
@@ -12,14 +12,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: authError }, { status: authError === "Unauthorized" ? 401 : 503 });
   }
 
-  const [settings, blockedDates] = await Promise.all([getSiteSettings(), getUnavailableDates()]);
+  const [settings, blockedDates] = await Promise.all([getSiteSettings(), listBlockedDates()]);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
   const nextBlockedDate = blockedDates.find((value) => {
-    const date = new Date(`${value}T00:00:00`);
+    const date = new Date(`${value.eventDate}T00:00:00`);
     return date >= now;
-  }) || null;
+  })?.eventDate || null;
 
   return NextResponse.json({
     summary: {
