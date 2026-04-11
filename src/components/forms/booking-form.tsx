@@ -36,7 +36,7 @@ interface BlockedDateEntry {
 
 interface AvailabilityEntry {
   date: string;
-  status: "available" | "pending" | "booked" | "blocked";
+  status: "available" | "blocked";
   note?: string;
 }
 
@@ -339,7 +339,7 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
       const availabilityResponse = await fetch(`/api/availability?date=${encodeURIComponent(form.eventDate)}`, {
         cache: "no-store"
       });
-      const availabilityPayload = await parseJson<{ available?: boolean; status?: string }>(availabilityResponse);
+      const availabilityPayload = await parseJson<{ available?: boolean; status?: "available" | "blocked" }>(availabilityResponse);
       const selectedStatus = availabilityPayload.status ?? "available";
       const isAvailable = availabilityPayload.available ?? selectedStatus === "available";
       console.info("[booking-flow] submit availability response", { date: form.eventDate, status: selectedStatus });
@@ -347,7 +347,7 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
       if (!isAvailable) {
         setStatus({
           kind: "bad",
-          text: selectedStatus === "pending" ? "Date not available: awaiting confirmation." : "Date not available"
+          text: "Date not available"
         });
         return;
       }
@@ -475,25 +475,23 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
                     type="button"
                     disabled={disabled}
                     onClick={() => chooseDate(cell)}
-                    title={cell.note || cell.iso || ""}
                     className={cn(
                       "min-h-[62px] rounded-lg border text-center text-sm font-bold transition duration-200",
                       !cell.day && "border-transparent bg-transparent",
                       cell.isToday && "ring-1 ring-luxeGold/70",
                       selected && "ring-2 ring-luxeBlue",
                       effectiveStatus === "available" && !cell.isPast && "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
-                      effectiveStatus === "pending" && "border-amber-300/40 bg-amber-500/10 text-amber-100 line-through",
-                      effectiveStatus === "booked" && "border-rose-400/40 bg-rose-500/10 text-rose-100 line-through",
                       effectiveStatus === "blocked" && "border-slate-400/60 bg-slate-800/70 text-slate-300 line-through",
                       cell.isPast && "border-white/10 bg-slate-900/70 text-slate-500 line-through"
                     )}
+                    title={effectiveStatus === "blocked" ? "Not available" : cell.iso || ""}
                   >
                     <div className="pt-4">{cell.day || ""}</div>
                   </button>
                 );
               })}
             </div>
-            <p className="mt-3 text-xs text-slate-300">Blocked, booked, pending, and past dates are disabled.</p>
+            <p className="mt-3 text-xs text-slate-300">Only blocked and past dates are disabled.</p>
             {monthLoading ? <p className="mt-3 text-sm text-slate-300">Loading month availability...</p> : null}
             {monthError ? <p className="status-bad mt-3">{monthError}</p> : null}
             {fieldError("eventDate")}

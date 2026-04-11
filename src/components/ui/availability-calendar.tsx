@@ -80,7 +80,8 @@ export function AvailabilityCalendar() {
   const offset = firstDay.getDay();
   const count = new Date(year, month + 1, 0).getDate();
 
-  const cells: Array<{ day?: number; iso?: string; status?: AvailabilityDate["status"]; note?: string; today?: boolean }> = [];
+  const todayIso = formatIsoDate(new Date());
+  const cells: Array<{ day?: number; iso?: string; status?: "available" | "blocked"; note?: string; today?: boolean; past?: boolean }> = [];
 
   for (let i = 0; i < offset; i += 1) cells.push({});
   for (let day = 1; day <= count; day += 1) {
@@ -89,12 +90,18 @@ export function AvailabilityCalendar() {
     const entry = availabilityMap.get(iso);
     const today = new Date();
     const isToday = date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
-    cells.push({ day, iso, status: entry?.status ?? "available", note: entry?.note, today: isToday });
+    const status = entry?.status === "blocked" ? "blocked" : "available";
+    cells.push({ day, iso, status, note: entry?.note, today: isToday, past: iso < todayIso });
   }
 
   const onDateClick = (cell: (typeof cells)[number]) => {
     if (!cell.iso) return;
     setSelectedIso(cell.iso);
+
+    if (cell.past) {
+      setStatusMessage("Past date");
+      return;
+    }
 
     if (cell.status === "available") {
       setStatusMessage("Opening booking form...");
@@ -102,12 +109,7 @@ export function AvailabilityCalendar() {
       return;
     }
 
-    if (cell.status === "pending") {
-      setStatusMessage("Awaiting confirmation");
-      return;
-    }
-
-    if (cell.status === "booked" || cell.status === "blocked") {
+    if (cell.status === "blocked") {
       setStatusMessage("Date not available");
     }
   };
@@ -142,21 +144,20 @@ export function AvailabilityCalendar() {
               !cell.day && "border-transparent bg-transparent",
               cell.today && "ring-1 ring-luxeGold/70",
               selectedIso && cell.iso === selectedIso && "ring-2 ring-luxeBlue",
-              cell.status === "available" && "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
-              cell.status === "pending" && "border-amber-300/40 bg-amber-500/10 text-amber-100",
-              cell.status === "booked" && "border-rose-400/40 bg-rose-500/10 text-rose-100",
-              cell.status === "blocked" && "border-slate-500/40 bg-slate-700/30 text-slate-300"
+              cell.status === "available" && !cell.past && "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
+              cell.status === "blocked" && "border-slate-500/60 bg-slate-800/75 text-slate-300 line-through",
+              cell.past && "border-white/10 bg-slate-900/70 text-slate-500 line-through"
             )}
-            title={cell.note || cell.iso}
-            aria-label={cell.iso ? `${cell.iso} ${cell.status}` : "empty"}
-            disabled={!cell.day || (cell.status !== "available" && Boolean(cell.iso))}
+            title={cell.status === "blocked" ? "Not available" : cell.iso}
+            aria-label={cell.iso ? `${cell.iso} ${cell.past ? "past" : cell.status}` : "empty"}
+            disabled={!cell.day || Boolean(cell.past) || cell.status === "blocked"}
           >
             <div className="pt-4">{cell.day || ""}</div>
           </button>
         ))}
       </div>
 
-      <p className="mt-3 text-xs text-slate-400">Blocked, booked, and pending dates are disabled for booking selection.</p>
+      <p className="mt-3 text-xs text-slate-400">Only admin-blocked dates are unavailable.</p>
 
       {loading ? <p className="mt-4 text-sm text-slate-300">Loading calendar...</p> : null}
       {loadError ? <p className="status-bad mt-4">{loadError}</p> : null}
@@ -166,17 +167,15 @@ export function AvailabilityCalendar() {
 
       <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-wide text-slate-300">
         <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-emerald-400" />Available</span>
-        <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-amber-300" />Pending</span>
-        <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-rose-400" />Booked</span>
         <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-slate-400" />Blocked</span>
+        <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-slate-600" />Past Date</span>
       </div>
 
       {selectedIso ? (
         <div className="mt-5 rounded-xl border border-white/15 bg-white/5 p-3 text-sm">
           <p className="font-bold text-white">Selected Date: {selectedIso}</p>
           <p className="mt-1 text-slate-300">
-            Status: {availabilityMap.get(selectedIso)?.status ?? "available"}
-            {availabilityMap.get(selectedIso)?.note ? ` - ${availabilityMap.get(selectedIso)?.note}` : ""}
+            Status: {selectedIso < todayIso ? "past" : availabilityMap.get(selectedIso)?.status === "blocked" ? "blocked" : "available"}
           </p>
           {statusMessage ? <p className="mt-1 text-slate-200">{statusMessage}</p> : null}
         </div>
