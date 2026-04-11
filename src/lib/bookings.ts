@@ -227,21 +227,3 @@ export async function getAvailabilityForMonth(monthIso: string): Promise<Availab
 
   return snapshot.docs.map((doc) => toAvailabilityRecord(doc.id, doc.data() as Partial<AvailabilityRecord>));
 }
-
-export async function setDateBlocked(date: string, note?: string): Promise<AvailabilityRecord> {
-  const db = getServerFirestore();
-  const ref = db.collection(AVAILABILITY_COLLECTION).doc(date);
-  await ref.set(
-    {
-      date,
-      status: "blocked" as AvailabilityStatus,
-      note: note?.trim() || "Blocked by admin",
-      bookingId: null,
-      updatedAt: FieldValue.serverTimestamp()
-    },
-    { merge: true }
-  );
-
-  const snap = await ref.get();
-  return toAvailabilityRecord(snap.id, snap.data() as Partial<AvailabilityRecord>);
-}

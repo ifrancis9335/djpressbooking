@@ -12,6 +12,7 @@ import { BookingStatus } from "../../../types/booking";
 import { requireAdminRequest } from "../../../lib/admin-auth";
 import { isFirebaseAdminConfigured } from "../../../lib/firebase";
 import { getSiteSettings } from "../../../lib/site-settings";
+import { getBlockedDateByEventDate } from "../../../lib/availability-db";
 
 const validStatuses: BookingStatus[] = [
   "new",
@@ -82,7 +83,10 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID();
+
   if (!isFirebaseAdminConfigured()) {
+    console.warn("[bookings] firebase_not_configured", { requestId });
     return NextResponse.json({ message: "Firebase Admin is not configured." }, { status: 503 });
   }
 
@@ -108,7 +112,18 @@ export async function POST(request: Request) {
       );
     }
 
+    const blockedRecord = await getBlockedDateByEventDate(parsed.data.eventDate);
+    if (blockedRecord?.status === "blocked") {
+      console.info("[bookings] blocked_date_rejected", {
+        requestId,
+        date: parsed.data.eventDate,
+        source: "postgres"
+      });
+      return NextResponse.json({ message: "Date not available" }, { status: 409 });
+    }
+
     const booking = await createBooking(parsed.data);
+    console.info("[bookings] booking_created", { requestId, bookingId: booking.id, date: booking.eventDate });
 
     return NextResponse.json(
       {
@@ -119,8 +134,14 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof BookingConflictError) {
+      console.warn("[bookings] booking_conflict", { requestId, message: error.message });
       return NextResponse.json({ message: error.message }, { status: 409 });
     }
+
+    console.error("[bookings] booking_failed", {
+      requestId,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
 
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Unable to process booking request" },

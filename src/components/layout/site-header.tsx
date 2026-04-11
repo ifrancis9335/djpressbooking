@@ -5,7 +5,6 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "../../utils/cn";
-import { PublicSiteData } from "../../types/site-settings";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -20,11 +19,10 @@ const navItems = [
 ];
 
 interface SiteHeaderProps {
-  siteContact: PublicSiteData["siteContact"];
   primaryCtaLabel: string;
 }
 
-export function SiteHeader({ siteContact, primaryCtaLabel }: SiteHeaderProps) {
+export function SiteHeader({ primaryCtaLabel }: SiteHeaderProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -45,10 +43,23 @@ export function SiteHeader({ siteContact, primaryCtaLabel }: SiteHeaderProps) {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isMobileMenuOpen]);
+
   return (
     <header className="sticky top-0 z-[120] border-b border-white/10 bg-[#070a14]/88 backdrop-blur-xl">
-      <div className="container-width flex min-h-[76px] items-center justify-between gap-4">
-        <Link href="/" className="focusable flex items-center gap-2.5 text-sm font-extrabold uppercase tracking-[0.12em] text-slate-100 md:text-base">
+      <div className="container-width flex min-h-[76px] items-center justify-between gap-3">
+        <Link href="/" className="focusable flex min-w-0 max-w-[74%] items-center gap-2.5 text-sm font-extrabold uppercase tracking-[0.12em] text-slate-100 md:max-w-none md:text-base">
           <Image
             src="/images/branding/dj-press-logo-press.png"
             alt="DJ Press International primary logo"
@@ -57,7 +68,7 @@ export function SiteHeader({ siteContact, primaryCtaLabel }: SiteHeaderProps) {
             className="h-8 w-8 rounded-full border border-luxeGold/35 object-contain shadow-glow md:h-9 md:w-9"
             priority
           />
-          <span>DJ <span className="text-luxeGold">Press</span> International</span>
+          <span className="truncate">DJ <span className="text-luxeGold">Press</span> International</span>
         </Link>
 
         <button
@@ -87,9 +98,6 @@ export function SiteHeader({ siteContact, primaryCtaLabel }: SiteHeaderProps) {
               </Link>
             );
           })}
-          <a href={siteContact.phoneHref} className="focusable mx-3 text-sm font-semibold text-luxeGold">
-            {siteContact.phone}
-          </a>
           <Link href="/booking" className="btn-primary md:ml-2">
             {primaryCtaLabel}
           </Link>
@@ -114,6 +122,16 @@ export function SiteHeader({ siteContact, primaryCtaLabel }: SiteHeaderProps) {
             : "pointer-events-none -translate-y-2 opacity-0"
         )}
       >
+        <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-300">Menu</p>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="focusable rounded-lg border border-white/20 px-2.5 py-1 text-xs font-semibold text-slate-200"
+          >
+            Close
+          </button>
+        </div>
         <nav className="flex flex-col gap-1.5" aria-label="Mobile main navigation">
           {navItems.map((item) => {
             const active = pathname === item.href;
@@ -132,17 +150,16 @@ export function SiteHeader({ siteContact, primaryCtaLabel }: SiteHeaderProps) {
               </Link>
             );
           })}
-
-          <a
-            href={siteContact.phoneHref}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="focusable mt-1 rounded-xl border border-luxeGold/35 bg-luxeGold/10 px-4 py-3 text-center text-sm font-semibold text-luxeGold"
-          >
-            {siteContact.phone}
-          </a>
-
           <Link href="/booking" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary mt-1">
             {primaryCtaLabel}
+          </Link>
+
+          <Link
+            href="/contact"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="focusable mt-1 rounded-xl border border-luxeBlue/40 bg-luxeBlue/10 px-4 py-3 text-center text-sm font-semibold text-slate-100"
+          >
+            Contact For Call Details
           </Link>
         </nav>
       </div>

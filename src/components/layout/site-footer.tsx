@@ -5,11 +5,10 @@ import { PublicSiteData } from "../../types/site-settings";
 interface SiteFooterProps {
   siteContact: PublicSiteData["siteContact"];
   packageTiers: PublicSiteData["packageTiers"];
-  primaryCtaLabel: string;
   serviceAreaLine: string;
 }
 
-export function SiteFooter({ siteContact, packageTiers, primaryCtaLabel, serviceAreaLine }: SiteFooterProps) {
+export function SiteFooter({ siteContact, packageTiers, serviceAreaLine }: SiteFooterProps) {
   const year = new Date().getFullYear();
 
   return (
@@ -50,7 +49,7 @@ export function SiteFooter({ siteContact, packageTiers, primaryCtaLabel, service
 
         <div>
           <h3 className="text-lg font-bold text-white">Explore</h3>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-300">
+          <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:flex sm:flex-wrap sm:gap-3">
             <Link className="footer-link" href="/services">Services</Link>
             <Link className="footer-link" href="/packages">Packages</Link>
             <Link className="footer-link" href="/availability">Availability</Link>
@@ -62,7 +61,7 @@ export function SiteFooter({ siteContact, packageTiers, primaryCtaLabel, service
 
         <div>
           <h3 className="text-lg font-bold text-white">Packages</h3>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-300">
+          <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:flex sm:flex-wrap sm:gap-3">
             {packageTiers.map((tier) => (
               <Link className="footer-link" key={tier.id} href={`/booking?package=${tier.id}`}>
                 {tier.name} ({tier.startingAt})
@@ -73,12 +72,11 @@ export function SiteFooter({ siteContact, packageTiers, primaryCtaLabel, service
 
         <div>
           <h3 className="text-lg font-bold text-white">Policy & Booking</h3>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-300">
+          <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:flex sm:flex-wrap sm:gap-3">
             <Link className="footer-link" href="/booking-policy">Booking Policy</Link>
             <Link className="footer-link" href="/privacy">Privacy Policy</Link>
             <Link className="footer-link" href="/terms">Terms</Link>
             <Link className="footer-link" href="/contact">Contact</Link>
-            <Link className="footer-link font-semibold text-luxeGold" href="/booking">{primaryCtaLabel}</Link>
           </div>
           <Link className="btn-primary mt-4" href="/booking">Start Booking Inquiry</Link>
           <p className="mt-4 text-xs tracking-wide text-slate-400">Copyright {year} DJ Press International. All rights reserved.</p>

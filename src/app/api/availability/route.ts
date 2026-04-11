@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAvailabilityForMonth } from "../../../lib/availability";
+import { getAvailabilityByDate, getAvailabilityForMonth } from "../../../lib/availability";
 import { isoDateSchema, monthSchema } from "../../../lib/validators/api";
 import { isFirebaseAdminConfigured } from "../../../lib/firebase";
 import { getBlockedDateByEventDate, listBlockedDates, listBlockedDatesForMonth } from "../../../lib/availability-db";
@@ -12,7 +12,13 @@ function monthFromNow() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function logAvailability(event: string, details: Record<string, unknown>) {
+  console.info("[availability]", event, details);
+}
+
 export async function GET(request: Request) {
+  const requestId = crypto.randomUUID();
+
   try {
     const { searchParams } = new URL(request.url);
     const month = searchParams.get("month");
@@ -21,6 +27,7 @@ export async function GET(request: Request) {
 
     if (list === "blocked") {
       const blockedDates = await listBlockedDates();
+      logAvailability("list_blocked", { requestId, count: blockedDates.length });
       return NextResponse.json({ blockedDates });
     }
 
@@ -33,6 +40,7 @@ export async function GET(request: Request) {
       const blockedRecord = await getBlockedDateByEventDate(date);
 
       if (blockedRecord?.status === "blocked") {
+        logAvailability("date_check_blocked", { requestId, date, source: "postgres" });
         return NextResponse.json({
           available: false,
           status: "blocked",
@@ -41,6 +49,25 @@ export async function GET(request: Request) {
         });
       }
 
+      if (isFirebaseAdminConfigured()) {
+        const firebaseRecord = await getAvailabilityByDate(date);
+        if (firebaseRecord.status !== "available") {
+          logAvailability("date_check_unavailable", {
+            requestId,
+            date,
+            source: "firebase",
+            status: firebaseRecord.status
+          });
+          return NextResponse.json({
+            available: false,
+            status: firebaseRecord.status,
+            source: "firebase",
+            record: firebaseRecord
+          });
+        }
+      }
+
+      logAvailability("date_check_available", { requestId, date, source: "postgres+firebase" });
       return NextResponse.json({ available: true, status: "available", source: "postgres" });
     }
 
@@ -68,8 +95,20 @@ export async function GET(request: Request) {
 
     const mergedAvailability = Array.from(availabilityMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
+    logAvailability("month_view", {
+      requestId,
+      month: selectedMonth,
+      firebaseRecords: availability.length,
+      blockedDates: blockedByMonth.length,
+      mergedRecords: mergedAvailability.length
+    });
+
     return NextResponse.json({ availability: mergedAvailability });
   } catch (error) {
+    console.error("[availability] request_failed", {
+      requestId,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Unable to load availability" },
       { status: 500 }

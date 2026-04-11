@@ -1,6 +1,5 @@
-import { FieldValue } from "firebase-admin/firestore";
 import { getServerFirestore } from "./firebase";
-import { AvailabilityRecord, AvailabilityStatus } from "../types/availability";
+import { AvailabilityRecord } from "../types/availability";
 
 const COLLECTION = "availability";
 
@@ -66,25 +65,4 @@ export async function getAvailabilityByDate(date: string): Promise<AvailabilityR
   }
 
   return normalizeRecord(doc.id, doc.data() as Partial<AvailabilityRecord>);
-}
-
-export async function isDateBookable(date: string) {
-  const record = await getAvailabilityByDate(date);
-  return record.status === "available";
-}
-
-export async function setDateBlocked(date: string, note?: string) {
-  const db = getServerFirestore();
-  await db.collection(COLLECTION).doc(date).set(
-    {
-      date,
-      status: "blocked" as AvailabilityStatus,
-      note: note?.trim() || "Blocked by admin",
-      bookingId: null,
-      updatedAt: FieldValue.serverTimestamp()
-    },
-    { merge: true }
-  );
-
-  return getAvailabilityByDate(date);
 }

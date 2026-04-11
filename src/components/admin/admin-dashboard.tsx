@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SiteSettings } from "../../types/site-settings";
 
 interface DashboardSummary {
@@ -53,6 +54,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export function AdminDashboard() {
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -86,7 +88,7 @@ export function AdminDashboard() {
       const [settingsPayload, summaryPayload, blockedPayload] = await Promise.all([
         fetch("/api/admin/settings", { cache: "no-store" }).then((res) => parseResponse<{ settings: SiteSettings }>(res)),
         fetch("/api/admin/dashboard", { cache: "no-store" }).then((res) => parseResponse<{ summary: DashboardSummary }>(res)),
-        fetch("/api/availability?list=blocked", { cache: "no-store" }).then((res) =>
+        fetch(`/api/availability?list=blocked&t=${Date.now()}`, { cache: "no-store" }).then((res) =>
           parseResponse<{ blockedDates: BlockedDateEntry[] }>(res)
         )
       ]);
@@ -198,9 +200,10 @@ export function AdminDashboard() {
       });
       const payload = await parseResponse<{ blockedDate: BlockedDateEntry; message: string }>(response);
       setBlockedDates((prev) => [...prev.filter((item) => item.eventDate !== payload.blockedDate.eventDate), payload.blockedDate].sort((a, b) => a.eventDate.localeCompare(b.eventDate)));
-      setBlockedMessage(payload.message);
+      setBlockedMessage(`${payload.message}. Public availability has been refreshed.`);
       setNewBlockedDate("");
       setNewBlockedNote("");
+      router.refresh();
       await loadDashboard();
     } catch (error) {
       setBlockedError(error instanceof Error ? error.message : "Unable to block date");
@@ -222,7 +225,8 @@ export function AdminDashboard() {
       });
       const payload = await parseResponse<{ message: string }>(response);
       setBlockedDates((prev) => prev.filter((entry) => entry.eventDate !== date));
-      setBlockedMessage(payload.message);
+      setBlockedMessage(`${payload.message}. Public availability has been refreshed.`);
+      router.refresh();
       await loadDashboard();
     } catch (error) {
       setBlockedError(error instanceof Error ? error.message : "Unable to remove date");

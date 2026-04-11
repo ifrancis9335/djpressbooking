@@ -244,7 +244,7 @@ export default async function HomePage() {
 
       <section className="section-shell">
         <Reveal className="container-width">
-          <div className="mb-5 flex items-end justify-between gap-3">
+          <div className="mb-5 flex flex-col items-start gap-3 md:flex-row md:items-end md:justify-between">
             <p className="section-kicker">Experience</p>
             <h2 className="text-3xl font-bold text-white">Gallery Preview</h2>
             <Link href="/gallery" className="btn-secondary">View Gallery</Link>
@@ -265,7 +265,7 @@ export default async function HomePage() {
 
       <section className="section-shell">
         <Reveal className="container-width">
-          <div className="mb-5 flex items-end justify-between gap-3">
+          <div className="mb-5 flex flex-col items-start gap-3 md:flex-row md:items-end md:justify-between">
             <p className="section-kicker">Social Proof</p>
             <h2 className="text-3xl font-bold text-white">Client Reviews</h2>
             <Link href="/reviews" className="btn-secondary">Read More</Link>

@@ -429,6 +429,10 @@ p {
     animation: ctaPulse 3.5s ease-in-out infinite;
   }
 
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   .spotlight-card {
     @apply glass-panel relative overflow-hidden p-6 md:p-8;
   }
@@ -559,8 +563,23 @@ p {
     width: 100%;
   }
 
+  main {
+    padding-bottom: 5.8rem;
+  }
+
+  .section-shell {
+    padding-top: 2.7rem;
+    padding-bottom: 2.9rem;
+  }
+
   .container-width {
     width: min(100% - 1.15rem, 1160px);
+  }
+
+  .sticky-book {
+    inset-inline: 0.75rem;
+    bottom: 0.75rem;
+    max-width: calc(100% - 1.5rem);
   }
 
   .hero-luxury-title {
@@ -588,6 +607,24 @@ p {
 
   .event-highlight-thumb {
     height: 220px;
+  }
+}
+
+@media (min-width: 375px) and (max-width: 430px) {
+  .container-width {
+    width: min(100% - 1rem, 1160px);
+  }
+
+  .section-shell {
+    padding-top: 2.45rem;
+    padding-bottom: 2.65rem;
+  }
+
+  .glass-panel,
+  .premium-card,
+  .luxury-stack {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 

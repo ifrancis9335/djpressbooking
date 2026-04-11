@@ -4,6 +4,5 @@ export {
   getAvailabilityForMonth,
   getBookingByDate,
   getBookings,
-  setDateBlocked,
   updateBookingStatus
 } from "../bookings";

@@ -84,12 +84,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: JSON.stringify(organizationSchema)
           }}
         />
-        <SiteHeader siteContact={siteContact} primaryCtaLabel={siteSettings.primaryCtaLabel} />
+        <SiteHeader primaryCtaLabel={siteSettings.primaryCtaLabel} />
         {children}
         <SiteFooter
           siteContact={siteContact}
           packageTiers={packageTiers}
-          primaryCtaLabel={siteSettings.primaryCtaLabel}
           serviceAreaLine={siteSettings.serviceAreaLine}
         />
         <MobileBookCta label={siteSettings.primaryCtaLabel} />

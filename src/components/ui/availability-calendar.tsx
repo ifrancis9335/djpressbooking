@@ -149,12 +149,14 @@ export function AvailabilityCalendar() {
             )}
             title={cell.note || cell.iso}
             aria-label={cell.iso ? `${cell.iso} ${cell.status}` : "empty"}
-            disabled={!cell.day}
+            disabled={!cell.day || (cell.status !== "available" && Boolean(cell.iso))}
           >
             <div className="pt-4">{cell.day || ""}</div>
           </button>
         ))}
       </div>
+
+      <p className="mt-3 text-xs text-slate-400">Blocked, booked, and pending dates are disabled for booking selection.</p>
 
       {loading ? <p className="mt-4 text-sm text-slate-300">Loading calendar...</p> : null}
       {loadError ? <p className="status-bad mt-4">{loadError}</p> : null}

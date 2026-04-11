@@ -37,10 +37,26 @@ interface BookingFormProps {
   initialPublicData: PublicSiteData;
 }
 
+interface BlockedDateEntry {
+  id: number;
+  eventDate: string;
+  status: "blocked" | "available";
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function monthIsoFromDate(value: string) {
+  return value.slice(0, 7);
+}
+
 export function BookingForm({ initialPublicData }: BookingFormProps) {
   const [form, setForm] = useState<BookingRequest>(initialState);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<{ kind: "ok" | "bad"; text: string } | null>(null);
+  const [dateStatus, setDateStatus] = useState<{ status: string; note?: string } | null>(null);
+  const [blockedDates, setBlockedDates] = useState<BlockedDateEntry[]>([]);
+  const [availabilityChecking, setAvailabilityChecking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -91,6 +107,70 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
     if (!selectedDate) return;
     setForm((prev) => (prev.eventDate ? prev : { ...prev, eventDate: selectedDate }));
   }, [searchParams]);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch(`/api/availability?list=blocked&t=${Date.now()}`, { cache: "no-store" })
+      .then((response) => parseJson<{ blockedDates?: BlockedDateEntry[] }>(response))
+      .then((payload) => {
+        if (!active) return;
+        setBlockedDates(payload.blockedDates ?? []);
+      })
+      .catch(() => {
+        if (!active) return;
+        setBlockedDates([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!form.eventDate) {
+      setDateStatus(null);
+      return;
+    }
+
+    setAvailabilityChecking(true);
+    fetch(`/api/availability?date=${encodeURIComponent(form.eventDate)}&t=${Date.now()}`, { cache: "no-store" })
+      .then((response) => parseJson<{ status?: string; blockedDate?: { note?: string | null } }>(response))
+      .then((payload) => {
+        if (!active) return;
+        const statusValue = payload.status ?? "available";
+        const note = payload.blockedDate?.note ?? undefined;
+        setDateStatus({ status: statusValue, note: note || undefined });
+
+        if (statusValue === "blocked" || statusValue === "booked" || statusValue === "pending") {
+          setErrors((prev) => ({ ...prev, eventDate: "Date not available" }));
+        } else {
+          setErrors((prev) => ({ ...prev, eventDate: "" }));
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setDateStatus(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        setAvailabilityChecking(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [form.eventDate]);
+
+  const blockedDateSet = useMemo(() => new Set(blockedDates.map((item) => item.eventDate)), [blockedDates]);
+
+  const blockedDatesForSelectedMonth = useMemo(() => {
+    if (!form.eventDate) return [] as BlockedDateEntry[];
+    const monthIso = monthIsoFromDate(form.eventDate);
+    return blockedDates.filter((item) => item.eventDate.startsWith(monthIso)).slice(0, 8);
+  }, [blockedDates, form.eventDate]);
 
   const update = (key: keyof BookingRequest, value: string | number) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -204,6 +284,12 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
 
     setLoading(true);
     try {
+      const hardBlocked = blockedDateSet.has(form.eventDate);
+      if (hardBlocked) {
+        setStatus({ kind: "bad", text: "Date not available" });
+        return;
+      }
+
       const availabilityResponse = await fetch(`/api/availability?date=${encodeURIComponent(form.eventDate)}`, {
         cache: "no-store"
       });
@@ -292,6 +378,21 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
                 <label className="field-label" htmlFor="eventDate">Event Date</label>
                 <input id="eventDate" type="date" aria-invalid={Boolean(errors.eventDate)} aria-describedby="eventDate-error" className={inputClass("eventDate")} value={form.eventDate} onChange={(e) => update("eventDate", e.target.value)} />
                 {fieldError("eventDate")}
+                {availabilityChecking ? <p className="text-xs text-slate-400">Checking availability...</p> : null}
+                {form.eventDate && dateStatus?.status === "blocked" ? (
+                  <p className="text-xs font-semibold text-rose-300">Date not available{dateStatus.note ? ` (${dateStatus.note})` : ""}</p>
+                ) : null}
+                {form.eventDate && dateStatus?.status === "pending" ? (
+                  <p className="text-xs font-semibold text-amber-300">Date not available: awaiting confirmation.</p>
+                ) : null}
+                {form.eventDate && dateStatus?.status === "booked" ? (
+                  <p className="text-xs font-semibold text-rose-300">Date not available</p>
+                ) : null}
+                {blockedDatesForSelectedMonth.length > 0 ? (
+                  <p className="text-xs text-slate-400">
+                    Blocked this month: {blockedDatesForSelectedMonth.map((item) => item.eventDate).join(", ")}
+                  </p>
+                ) : null}
               </div>
               <div className="field">
                 <label className="field-label" htmlFor="startTime">Start Time</label>
