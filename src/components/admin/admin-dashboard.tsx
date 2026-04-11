@@ -21,6 +21,15 @@ interface BlockedDateEntry {
   updatedAt: string;
 }
 
+const week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function toIsoDateLocal(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 const defaultSettings: SiteSettings = {
   contact: {
     phone: "",
@@ -66,6 +75,7 @@ export function AdminDashboard() {
   const [blockedDates, setBlockedDates] = useState<BlockedDateEntry[]>([]);
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedNote, setNewBlockedNote] = useState("");
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
 
   const [loading, setLoading] = useState(false);
   const [blockedLoading, setBlockedLoading] = useState(false);
@@ -193,12 +203,14 @@ export function AdminDashboard() {
     setBlockedMessage(null);
 
     try {
+      console.info("[admin-dashboard] block request", { date: newBlockedDate, note: newBlockedNote });
       const response = await fetch("/api/admin/availability/block", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: newBlockedDate, note: newBlockedNote })
       });
       const payload = await parseResponse<{ blockedDate: BlockedDateEntry; message: string }>(response);
+      console.info("[admin-dashboard] block response", { date: payload.blockedDate.eventDate, status: payload.blockedDate.status });
       setBlockedDates((prev) => [...prev.filter((item) => item.eventDate !== payload.blockedDate.eventDate), payload.blockedDate].sort((a, b) => a.eventDate.localeCompare(b.eventDate)));
       setBlockedMessage(`${payload.message}. Public availability has been refreshed.`);
       setNewBlockedDate("");
@@ -218,12 +230,14 @@ export function AdminDashboard() {
     setBlockedMessage(null);
 
     try {
+      console.info("[admin-dashboard] unblock request", { date });
       const response = await fetch("/api/admin/availability/unblock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date })
       });
       const payload = await parseResponse<{ message: string }>(response);
+      console.info("[admin-dashboard] unblock response", { date, message: payload.message });
       setBlockedDates((prev) => prev.filter((entry) => entry.eventDate !== date));
       setBlockedMessage(`${payload.message}. Public availability has been refreshed.`);
       router.refresh();
@@ -245,6 +259,59 @@ export function AdminDashboard() {
     ],
     []
   );
+
+  const blockedDateSet = useMemo(() => new Set(blockedDates.map((entry) => entry.eventDate)), [blockedDates]);
+
+  const calendarCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const offset = firstDay.getDay();
+    const count = new Date(year, month + 1, 0).getDate();
+    const cells: Array<{ day?: number; iso?: string; blocked?: boolean }> = [];
+
+    for (let i = 0; i < offset; i += 1) {
+      cells.push({});
+    }
+
+    for (let day = 1; day <= count; day += 1) {
+      const iso = toIsoDateLocal(new Date(year, month, day));
+      cells.push({ day, iso, blocked: blockedDateSet.has(iso) });
+    }
+
+    return cells;
+  }, [blockedDateSet, calendarMonth]);
+
+  const toggleCalendarDate = async (iso: string, blocked: boolean) => {
+    setNewBlockedDate(iso);
+    if (blocked) {
+      await removeBlockedDate(iso);
+      return;
+    }
+
+    setBlockedLoading(true);
+    setBlockedError(null);
+    setBlockedMessage(null);
+
+    try {
+      console.info("[admin-dashboard] calendar block request", { date: iso, note: newBlockedNote });
+      const response = await fetch("/api/admin/availability/block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: iso, note: newBlockedNote })
+      });
+      const payload = await parseResponse<{ blockedDate: BlockedDateEntry; message: string }>(response);
+      console.info("[admin-dashboard] calendar block response", { date: payload.blockedDate.eventDate, status: payload.blockedDate.status });
+      setBlockedDates((prev) => [...prev.filter((item) => item.eventDate !== payload.blockedDate.eventDate), payload.blockedDate].sort((a, b) => a.eventDate.localeCompare(b.eventDate)));
+      setBlockedMessage(`${payload.message}. Public availability has been refreshed.`);
+      router.refresh();
+      await loadDashboard();
+    } catch (error) {
+      setBlockedError(error instanceof Error ? error.message : "Unable to block date");
+    } finally {
+      setBlockedLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadDashboard();
@@ -305,6 +372,52 @@ export function AdminDashboard() {
       <section id="blocked-dates" className="glass-panel p-5 md:p-6">
         <h3 className="text-xl font-bold text-white">Blocked Dates Manager</h3>
         <p className="mt-1 text-sm text-slate-300">Manage live blocked dates saved in Postgres.</p>
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="btn-secondary md:w-auto"
+              onClick={() => setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+            >
+              Previous
+            </button>
+            <h4 className="text-base font-bold text-white">
+              {new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(calendarMonth)}
+            </h4>
+            <button
+              type="button"
+              className="btn-secondary md:w-auto"
+              onClick={() => setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+            >
+              Next
+            </button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {week.map((day) => (
+              <div key={day} className="rounded-lg bg-white/5 py-2 text-center text-xs font-bold uppercase tracking-wider text-slate-300">
+                {day}
+              </div>
+            ))}
+            {calendarCells.map((cell, index) => (
+              <button
+                key={`${cell.iso || "pad"}-${index}`}
+                type="button"
+                disabled={!cell.iso || blockedLoading}
+                onClick={() => {
+                  if (!cell.iso) return;
+                  void toggleCalendarDate(cell.iso, Boolean(cell.blocked));
+                }}
+                className={`min-h-[58px] rounded-lg border text-center text-sm font-semibold transition ${!cell.day ? "border-transparent bg-transparent" : cell.blocked ? "border-rose-400/50 bg-rose-500/20 text-rose-100" : "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"}`}
+                title={cell.iso ? `${cell.iso} (${cell.blocked ? "blocked" : "available"})` : ""}
+              >
+                {cell.day || ""}
+              </button>
+            ))}
+          </div>
+
+          <p className="mt-3 text-xs text-slate-300">Click a date to toggle block/unblock instantly.</p>
+        </div>
         <div className="mt-3 grid gap-3 md:grid-cols-[260px_1fr_auto]">
           <input type="date" className="field-input" value={newBlockedDate} onChange={(event) => setNewBlockedDate(event.target.value)} />
           <input

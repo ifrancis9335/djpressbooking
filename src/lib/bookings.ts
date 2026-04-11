@@ -17,11 +17,13 @@ function isIsoDate(date: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(date);
 }
 
+function localTodayIso() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 function isPastDate(date: string) {
-  const eventDate = new Date(`${date}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return eventDate < today;
+  return date < localTodayIso();
 }
 
 function toIsoString(value: Booking["createdAt"] | { toDate?: () => Date } | undefined) {
@@ -108,11 +110,28 @@ export async function createBooking(payload: BookingRequest): Promise<Booking> {
       id: bookingDocRef.id,
       createdAt: nowIso,
       status: "awaiting_response",
-      packageId: payload.packageId || undefined,
-      addOns: payload.selectedAddOns ?? [],
-      selectedAddOns: payload.selectedAddOns ?? [],
+      packageId: payload.packageId?.trim() || undefined,
+      addOns: payload.selectedAddOns ?? payload.addOns ?? [],
+      selectedAddOns: payload.selectedAddOns ?? payload.addOns ?? [],
       specialNotes: payload.specialNotes?.trim() ?? "",
-      ...payload
+      fullName: payload.fullName,
+      email: payload.email,
+      phone: payload.phone,
+      eventType: payload.eventType,
+      eventDate: payload.eventDate,
+      startTime: payload.startTime ?? "",
+      endTime: payload.endTime ?? "",
+      venueName: payload.venueName ?? "",
+      venueAddress: payload.venueAddress ?? "",
+      city: payload.city ?? "",
+      settingType: payload.settingType ?? "indoor",
+      guestCount: payload.guestCount ?? 1,
+      genres: payload.genres ?? "",
+      cleanMusic: payload.cleanMusic ?? "yes",
+      mcService: payload.mcService ?? "no",
+      lights: payload.lights ?? "no",
+      budgetRange: payload.budgetRange ?? "",
+      preferredContactMethod: payload.preferredContactMethod
     };
 
     transaction.set(bookingDocRef, {

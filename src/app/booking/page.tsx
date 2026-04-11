@@ -18,12 +18,13 @@ export default async function BookingPage() {
         <p className="section-kicker">Booking Flow</p>
         <h1 className="text-3xl font-bold text-white md:text-4xl">Booking Inquiry</h1>
         <p className="mt-3 max-w-3xl text-slate-300">
-          Complete this form to receive date confirmation, package fit guidance, and next-step booking details.
+          Choose a date first, get an automatic availability check, then submit a short inquiry.
         </p>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <article className="premium-card"><h2 className="text-xl text-white">Step 1</h2><p className="mt-2 text-sm text-slate-300">Share your event details and priorities.</p></article>
-          <article className="premium-card"><h2 className="text-xl text-white">Step 2</h2><p className="mt-2 text-sm text-slate-300">Receive availability and package options.</p></article>
-          <article className="premium-card"><h2 className="text-xl text-white">Step 3</h2><p className="mt-2 text-sm text-slate-300">Confirm your date with booking terms.</p></article>
+        <div className="mt-5 grid gap-4 md:grid-cols-4">
+          <article className="premium-card"><h2 className="text-xl text-white">Step 1</h2><p className="mt-2 text-sm text-slate-300">Choose date on live calendar.</p></article>
+          <article className="premium-card"><h2 className="text-xl text-white">Step 2</h2><p className="mt-2 text-sm text-slate-300">Auto-check real-time availability.</p></article>
+          <article className="premium-card"><h2 className="text-xl text-white">Step 3</h2><p className="mt-2 text-sm text-slate-300">Fill short inquiry form.</p></article>
+          <article className="premium-card"><h2 className="text-xl text-white">Step 4</h2><p className="mt-2 text-sm text-slate-300">Review and submit inquiry.</p></article>
         </div>
         <div className="mt-6">
           <Suspense fallback={<div className="glass-panel p-6 text-sm text-slate-300">Loading booking form...</div>}>

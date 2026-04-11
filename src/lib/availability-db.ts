@@ -14,15 +14,21 @@ export interface BlockedDateRow {
 
 function mapBlockedDateRow(row: {
   id: number;
-  event_date: string;
+  event_date: string | Date;
   status: BlockedDateStatus;
   note: string | null;
   created_at: string | Date;
   updated_at: string | Date;
 }): BlockedDateRow {
+  const eventDateValue = row.event_date;
+  const eventDate =
+    typeof eventDateValue === "string"
+      ? eventDateValue.slice(0, 10)
+      : `${eventDateValue.getFullYear()}-${String(eventDateValue.getMonth() + 1).padStart(2, "0")}-${String(eventDateValue.getDate()).padStart(2, "0")}`;
+
   return {
     id: row.id,
-    eventDate: row.event_date,
+    eventDate,
     status: row.status,
     note: row.note,
     createdAt: new Date(row.created_at).toISOString(),

@@ -84,6 +84,7 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
+  console.info("[bookings] submit_request", { requestId });
 
   if (!isFirebaseAdminConfigured()) {
     console.warn("[bookings] firebase_not_configured", { requestId });
@@ -100,6 +101,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    console.info("[bookings] submit_payload_received", {
+      requestId,
+      eventDate: typeof body?.eventDate === "string" ? body.eventDate : "unknown"
+    });
     const parsed = bookingSchema.safeParse(body);
 
     if (!parsed.success) {
