@@ -28,7 +28,7 @@ export default async function ContactPage() {
             <p className="text-slate-300">Service Area: {siteContact.serviceArea}</p>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <a href="tel:+18433129965" className="btn-secondary">Call Now</a>
+            <a href={siteContact.phoneHref} className="btn-secondary">Call Now</a>
             <Link href="/booking" className="btn-primary">Start Booking Inquiry</Link>
           </div>
         </section>

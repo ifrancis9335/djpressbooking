@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
 import { getPublicSiteData } from "../../lib/site-settings";
+import { getAboutStats } from "../../lib/content-items";
 
 export const metadata: Metadata = {
   title: "About DJ Press International",
@@ -9,7 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  const { siteContact } = await getPublicSiteData();
+  const { siteContact, siteContent } = await getPublicSiteData();
+  const aboutStats = getAboutStats(siteContent);
 
   return (
     <main className="section-shell">
@@ -27,22 +29,19 @@ export default async function AboutPage() {
         </section>
 
         <section className="premium-card">
-          <p className="section-kicker">Brand Story</p>
-          <h1 className="text-3xl font-bold text-white">About DJ Press International</h1>
+          <p className="section-kicker">{siteContent.aboutIntro.kicker}</p>
+          <h1 className="text-3xl font-bold text-white">{siteContent.aboutIntro.title}</h1>
           <p className="mt-3 text-slate-300">
-            DJ Press International was built to deliver elite entertainment with disciplined execution. Every event is custom-tailored to
-            the audience, timeline, and atmosphere goals.
+            {siteContent.aboutIntro.paragraphOne}
           </p>
           <p className="mt-3 text-slate-300">
-            From weddings and corporate activations to nightlife and cultural events, the focus remains the same: premium quality,
-            reliability, and unforgettable crowd energy.
+            {siteContent.aboutIntro.paragraphTwo}
           </p>
           <h2 className="text-2xl text-white">Core Brand Values</h2>
           <ul className="mt-4 list-disc space-y-2 pl-5 text-slate-300">
-            <li>Professionalism and clear communication</li>
-            <li>Reliable setup, timing, and execution</li>
-            <li>Versatility across event formats and demographics</li>
-            <li>High-energy performance with controlled flow</li>
+            {aboutStats.map((item) => (
+              <li key={item.id}>{item.label}: {item.value}</li>
+            ))}
             <li>Service focus across {siteContact.serviceArea}</li>
           </ul>
         </section>

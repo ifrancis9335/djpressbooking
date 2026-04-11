@@ -1,8 +1,11 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { unstable_noStore as noStore } from "next/cache";
 import { packageTiers as defaultPackageTiers } from "../data/packages";
 import { siteContact as defaultSiteContact } from "../data/site";
 import { PublicSiteData, SiteSettings } from "../types/site-settings";
+import { DeepPartial, SiteContent } from "../types/site-content";
+import { defaultSiteContent, loadSiteContent, mergeSiteContentPatch } from "./site-content";
 
 const siteSettingsPath = path.join(process.cwd(), "data", "site-settings.json");
 
@@ -39,7 +42,8 @@ const defaultSettings: SiteSettings = {
     primaryCtaLabel: "Book Now",
     heroSupportText: "Charleston Luxury DJ Booking",
     serviceAreaLine: defaultSiteContact.serviceArea
-  }
+  },
+  content: defaultSiteContent
 };
 
 function normalizeSettings(input: unknown): SiteSettings {
@@ -48,7 +52,7 @@ function normalizeSettings(input: unknown): SiteSettings {
   }
 
   const candidate = input as Partial<SiteSettings>;
-  return {
+  const normalized: SiteSettings = {
     contact: {
       phone: candidate.contact?.phone?.trim() || defaultSettings.contact.phone,
       phoneHref: candidate.contact?.phoneHref?.trim() || defaultSettings.contact.phoneHref,
@@ -80,11 +84,18 @@ function normalizeSettings(input: unknown): SiteSettings {
       primaryCtaLabel: candidate.site?.primaryCtaLabel?.trim() || defaultSettings.site.primaryCtaLabel,
       heroSupportText: candidate.site?.heroSupportText?.trim() || defaultSettings.site.heroSupportText,
       serviceAreaLine: candidate.site?.serviceAreaLine?.trim() || defaultSettings.site.serviceAreaLine
-    }
+    },
+    content: candidate.content && typeof candidate.content === "object" ? (candidate.content as DeepPartial<SiteContent>) : undefined
+  };
+
+  return {
+    ...normalized,
+    content: loadSiteContent(normalized)
   };
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
+  noStore();
   try {
     const raw = await fs.readFile(siteSettingsPath, "utf8");
     return normalizeSettings(JSON.parse(raw));
@@ -101,6 +112,10 @@ export async function saveSiteSettings(next: SiteSettings): Promise<SiteSettings
 
 export async function patchSiteSettings(partial: Partial<SiteSettings>): Promise<SiteSettings> {
   const current = await getSiteSettings();
+  const mergedContent = partial.content
+    ? mergeSiteContentPatch(loadSiteContent(current), partial.content as DeepPartial<SiteContent>)
+    : loadSiteContent(current);
+
   const merged: SiteSettings = {
     contact: { ...current.contact, ...partial.contact },
     packages: {
@@ -109,13 +124,15 @@ export async function patchSiteSettings(partial: Partial<SiteSettings>): Promise
       vip: { ...current.packages.vip, ...partial.packages?.vip }
     },
     booking: { ...current.booking, ...partial.booking },
-    site: { ...current.site, ...partial.site }
+    site: { ...current.site, ...partial.site },
+    content: mergedContent
   };
 
   return saveSiteSettings(merged);
 }
 
 export async function getPublicSiteData(): Promise<PublicSiteData> {
+  noStore();
   const settings = await getSiteSettings();
 
   const packageMap = new Map(
@@ -143,6 +160,7 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
     },
     packageTiers: defaultPackageTiers.map((tier) => packageMap.get(tier.id) || tier),
     bookingSettings: settings.booking,
-    siteSettings: settings.site
+    siteSettings: settings.site,
+    siteContent: loadSiteContent(settings)
   };
 }

@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { packageAddOns, packageComparisonRows } from "../../data/catalog";
+import { FallbackImage } from "../../components/ui/fallback-image";
 import { Reveal } from "../../components/ui/reveal";
 import { getPublicSiteData } from "../../lib/site-settings";
+import { getPackageItems } from "../../lib/content-items";
 
 export const metadata: Metadata = {
   title: "Packages",
@@ -10,20 +12,31 @@ export const metadata: Metadata = {
 };
 
 export default async function PackagesPage() {
-  const { packageTiers } = await getPublicSiteData();
+  const { siteContent } = await getPublicSiteData();
+  const packageItems = getPackageItems(siteContent);
 
   return (
     <main className="section-shell">
       <div className="container-width">
         <Reveal>
-          <p className="section-kicker">Pricing & Value</p>
-          <h1 className="text-3xl font-bold text-white md:text-4xl">Packages</h1>
-          <p className="mt-3 max-w-3xl text-slate-300">Transparent starting rates with scalable production options for your event goals.</p>
+          <p className="section-kicker">{siteContent.packagesIntro.kicker}</p>
+          <h1 className="text-3xl font-bold text-white md:text-4xl">{siteContent.packagesIntro.title}</h1>
+          <p className="mt-3 max-w-3xl text-slate-300">{siteContent.packagesIntro.description}</p>
         </Reveal>
 
         <Reveal className="mt-6 grid gap-4 md:grid-cols-3">
-          {packageTiers.map((tier) => (
+          {packageItems.map((tier) => (
             <article className={`premium-card ${tier.featured ? "package-card-featured" : ""}`} key={tier.id}>
+              {tier.image ? (
+                <FallbackImage
+                  src={tier.image}
+                  fallbackSrc="/images/dj/dj-press-live-performance.jpg"
+                  alt={`${tier.name} package image`}
+                  width={900}
+                  height={520}
+                  className="mb-3 h-[200px] w-full rounded-xl object-cover"
+                />
+              ) : null}
               {tier.featureLabel ? (
                 <p className="mb-2 text-xs font-extrabold uppercase tracking-wider text-luxeGold">{tier.featureLabel}</p>
               ) : null}

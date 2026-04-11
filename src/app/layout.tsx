@@ -3,16 +3,19 @@ import "./globals.css";
 import { SiteHeader } from "../components/layout/site-header";
 import { SiteFooter } from "../components/layout/site-footer";
 import { MobileBookCta } from "../components/layout/mobile-book-cta";
+import { getManagedImageUrl } from "../lib/media";
 import { getPublicSiteData } from "../lib/site-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteContact } = await getPublicSiteData();
+  const { siteContact, siteContent } = await getPublicSiteData();
+  const branding = siteContent.branding;
+  const logoImage = getManagedImageUrl(branding.logoImageAsset, branding.logoImage, "/images/branding/dj-press-logo-press.png");
 
   return {
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
     title: {
-      default: "DJ Press International | Premium DJ Booking Platform",
-      template: "%s | DJ Press International"
+      default: `${branding.siteName} | Premium DJ Booking Platform`,
+      template: `%s | ${branding.siteName}`
     },
     description:
       `Premium DJ booking platform for weddings, nightlife, and private events in Charleston, SC and surrounding areas. Call ${siteContact.phone}.`,
@@ -31,13 +34,13 @@ export async function generateMetadata(): Promise<Metadata> {
       description:
         "Luxury event soundtrack design and premium DJ booking for Charleston and surrounding areas.",
       url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-      siteName: "DJ Press International",
+      siteName: branding.siteName,
       images: [
         {
-          url: "/images/branding/dj-press-logo-press.png",
+          url: logoImage,
           width: 1024,
           height: 1024,
-          alt: "DJ Press International logo"
+          alt: `${branding.siteName} logo`
         }
       ],
       type: "website",
@@ -45,9 +48,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: "DJ Press International",
+      title: branding.siteName,
       description: "Premium DJ booking for weddings, nightlife, and private events in Charleston.",
-      images: ["/images/branding/dj-press-logo-press.png"]
+      images: [logoImage]
     },
     other: {
       "contact:phone_number": siteContact.phone
@@ -56,12 +59,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { siteContact, packageTiers, siteSettings } = await getPublicSiteData();
+  const { siteContact, packageTiers, siteSettings, siteContent } = await getPublicSiteData();
+  const branding = siteContent.branding;
+  const primaryCtaLabel = siteContent.homepageHero.primaryCtaLabel || siteSettings.primaryCtaLabel;
+  const secondaryCtaLabel = siteContent.homepageHero.secondaryCtaLabel || "Contact";
 
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    name: "DJ Press International",
+    name: branding.siteName,
     url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
     telephone: siteContact.phone,
     email: siteContact.email,
@@ -84,14 +90,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: JSON.stringify(organizationSchema)
           }}
         />
-        <SiteHeader primaryCtaLabel={siteSettings.primaryCtaLabel} />
+        <SiteHeader
+          branding={branding}
+          phone={siteContact.phone}
+          phoneHref={siteContact.phoneHref}
+          primaryCtaLabel={primaryCtaLabel}
+          secondaryCtaLabel={secondaryCtaLabel}
+        />
         {children}
         <SiteFooter
+          branding={branding}
           siteContact={siteContact}
           packageTiers={packageTiers}
           serviceAreaLine={siteSettings.serviceAreaLine}
+          primaryCtaLabel={primaryCtaLabel}
         />
-        <MobileBookCta label={siteSettings.primaryCtaLabel} />
+        <MobileBookCta label={primaryCtaLabel} />
       </body>
     </html>
   );

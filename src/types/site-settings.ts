@@ -1,3 +1,5 @@
+import { DeepPartial, SiteContent } from "./site-content";
+
 export interface ContactSettings {
   phone: string;
   phoneHref: string;
@@ -33,6 +35,7 @@ export interface SiteSettings {
   packages: PackageSettings;
   booking: BookingSettings;
   site: SiteUiSettings;
+  content?: DeepPartial<SiteContent>;
 }
 
 export interface PublicSiteData {
@@ -63,4 +66,5 @@ export interface PublicSiteData {
   }>;
   bookingSettings: BookingSettings;
   siteSettings: SiteUiSettings;
+  siteContent: SiteContent;
 }

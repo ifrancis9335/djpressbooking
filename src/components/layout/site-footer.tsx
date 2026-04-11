@@ -1,15 +1,20 @@
 import Link from "next/link";
-import Image from "next/image";
 import { PublicSiteData } from "../../types/site-settings";
+import { BrandingContent } from "../../types/site-content";
+import { getManagedImageUrl } from "../../lib/media";
+import { FallbackImage } from "../ui/fallback-image";
 
 interface SiteFooterProps {
+  branding: BrandingContent;
   siteContact: PublicSiteData["siteContact"];
   packageTiers: PublicSiteData["packageTiers"];
   serviceAreaLine: string;
+  primaryCtaLabel: string;
 }
 
-export function SiteFooter({ siteContact, packageTiers, serviceAreaLine }: SiteFooterProps) {
+export function SiteFooter({ branding, siteContact, packageTiers, serviceAreaLine, primaryCtaLabel }: SiteFooterProps) {
   const year = new Date().getFullYear();
+  const logoImage = getManagedImageUrl(branding.logoImageAsset, branding.logoImage, "/images/branding/dj-press-logo-press.png");
 
   return (
     <footer className="footer-shell">
@@ -17,17 +22,18 @@ export function SiteFooter({ siteContact, packageTiers, serviceAreaLine }: SiteF
         <div>
           <p className="section-kicker border-luxeGold/45 bg-luxeGold/10 text-amber-100">{serviceAreaLine}</p>
           <div className="mt-3 flex items-center gap-3">
-            <Image
-              src="/images/branding/dj-press-logo-press.png"
-              alt="DJ Press International primary logo"
+            <FallbackImage
+              src={logoImage}
+              fallbackSrc="/images/branding/dj-press-logo-press.png"
+              alt={`${branding.siteName} primary logo`}
               width={52}
               height={52}
               className="h-11 w-11 rounded-full border border-luxeGold/35 object-contain"
             />
-            <h3 className="text-lg font-bold text-white">DJ Press International</h3>
+            <h3 className="text-lg font-bold text-white">{branding.siteName}</h3>
           </div>
           <p className="mt-2 text-sm text-slate-300">
-            Premium DJ booking and event soundtrack design for {siteContact.serviceArea}.
+            {branding.tagline} for {siteContact.serviceArea}.
           </p>
           <a className="focusable mt-3 inline-block text-sm font-semibold text-luxeGold" href={`mailto:${siteContact.email}`}>
             {siteContact.email}
@@ -37,9 +43,10 @@ export function SiteFooter({ siteContact, packageTiers, serviceAreaLine }: SiteF
           </p>
           <p className="mt-4 text-xs uppercase tracking-wider text-slate-400">Luxury nightlife energy. Professional event precision.</p>
           <div className="mt-3">
-            <Image
-              src="/images/branding/dj-press-logo-press.png"
-              alt="DJ Press International primary logo"
+            <FallbackImage
+              src={logoImage}
+              fallbackSrc="/images/branding/dj-press-logo-press.png"
+              alt={`${branding.siteName} primary logo`}
               width={48}
               height={48}
               className="h-9 w-9 object-contain opacity-65"
@@ -78,8 +85,8 @@ export function SiteFooter({ siteContact, packageTiers, serviceAreaLine }: SiteF
             <Link className="footer-link" href="/terms">Terms</Link>
             <Link className="footer-link" href="/contact">Contact</Link>
           </div>
-          <Link className="btn-primary mt-4" href="/booking">Start Booking Inquiry</Link>
-          <p className="mt-4 text-xs tracking-wide text-slate-400">Copyright {year} DJ Press International. All rights reserved.</p>
+          <Link className="btn-primary mt-4" href="/booking">{primaryCtaLabel}</Link>
+          <p className="mt-4 text-xs tracking-wide text-slate-400">Copyright {year} {branding.siteName}. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -4,14 +4,14 @@ import { Metadata } from "next";
 import {
   eventHighlights,
   featuredExperiencePillars,
-  galleryItems,
-  heroTrustItems,
-  serviceTypes,
-  testimonials
+  heroTrustItems
 } from "../data/catalog";
 import { AnimatedCounter } from "../components/ui/animated-counter";
+import { FallbackImage } from "../components/ui/fallback-image";
 import { Reveal } from "../components/ui/reveal";
+import { getManagedImageUrl } from "../lib/media";
 import { getPublicSiteData } from "../lib/site-settings";
+import { getGalleryItems, getPackageItems, getReviewItems, getServiceItems } from "../lib/content-items";
 
 export const metadata: Metadata = {
   title: "Luxury DJ Booking in Charleston",
@@ -20,7 +20,50 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const { packageTiers, siteContact, siteSettings } = await getPublicSiteData();
+  const { siteContact, siteSettings, siteContent } = await getPublicSiteData();
+  const visibility = siteContent.sectionVisibility;
+  const heroImage = getManagedImageUrl(
+    siteContent.homepageHero.heroImageAsset,
+    siteContent.homepageHero.heroImage,
+    "/images/dj/dj-press-live-performance.jpg"
+  );
+  const logoImage = getManagedImageUrl(
+    siteContent.branding.logoImageAsset,
+    siteContent.branding.logoImage,
+    "/images/branding/dj-press-logo-press.png"
+  );
+  const serviceItems = getServiceItems(siteContent);
+  const packageItems = getPackageItems(siteContent);
+  const galleryItems = getGalleryItems(siteContent);
+  const reviewItems = getReviewItems(siteContent);
+  const homepageFeatured = {
+    kicker: siteContent.homepageFeatured.kicker || "Featured Experience",
+    title: siteContent.homepageFeatured.title || "Why Events Feel Different with DJ Press",
+    description:
+      siteContent.homepageFeatured.description ||
+      "Elevated direction, polished pacing, and premium production consistency across event segments."
+  };
+  const homepageTrust = {
+    kicker: siteContent.homepageTrust.kicker || "Trust & Performance",
+    title: siteContent.homepageTrust.title || "Why Book DJ Press International",
+    description:
+      siteContent.homepageTrust.description ||
+      "Professional communication, reliable execution, and high-energy event flow designed for mixed audiences."
+  };
+  const homepageHighlights = {
+    kicker: siteContent.homepageHighlights.kicker || "Event Highlights",
+    title: siteContent.homepageHighlights.title || "Experiences We Build",
+    description:
+      siteContent.homepageHighlights.description ||
+      "Curated event formats with intentional transitions from opening vibe through peak dancefloor moments."
+  };
+  const homepageFinalCta = {
+    kicker: siteContent.homepageFinalCta.kicker || "Reserve Your Date",
+    title: siteContent.homepageFinalCta.title || siteContact.bookingCta.title,
+    description: siteContent.homepageFinalCta.description || siteContact.bookingCta.description,
+    primaryCtaLabel: siteContent.homepageFinalCta.primaryCtaLabel || "Start Booking Inquiry",
+    secondaryCtaLabel: siteContent.homepageFinalCta.secondaryCtaLabel || "Contact Team"
+  };
 
   const featuredMediaCards = [
     {
@@ -44,22 +87,22 @@ export default async function HomePage() {
 
   return (
     <main>
+      {visibility.homepageHero ? (
       <section className="section-shell">
         <div className="container-width hero-luxury grid gap-6 md:grid-cols-[1.05fr_0.95fr] md:items-center">
           <div className="hero-luxury-content">
             <p className="section-kicker border-luxeGold/55 bg-luxeGold/12 text-amber-100">
-              {siteSettings.heroSupportText}
+              {siteContent.homepageHero.kicker || siteSettings.heroSupportText}
             </p>
             <h1 className="hero-luxury-title mt-4">
-              Premium DJ Experiences for Weddings, Private Events, and Nightlife
+              {siteContent.homepageHero.title}
             </h1>
             <p className="hero-luxury-copy mt-4">
-              DJ Press International delivers polished event execution, crowd-focused music flow, and premium energy for Charleston-area celebrations.
-              From first dance to final set, every transition is intentional and professionally managed.
+              {siteContent.homepageHero.description}
             </p>
             <div className="cta-rhythm">
-              <Link href="/booking" className="btn-primary">{siteSettings.primaryCtaLabel}</Link>
-              <Link href="/services" className="btn-secondary">Explore Services</Link>
+              <Link href="/booking" className="btn-primary">{siteContent.homepageHero.primaryCtaLabel || siteSettings.primaryCtaLabel}</Link>
+              <Link href="/services" className="btn-secondary">{siteContent.homepageHero.secondaryCtaLabel}</Link>
             </div>
 
             <div className="hero-mini-stats">
@@ -71,9 +114,10 @@ export default async function HomePage() {
 
           <aside className="hero-side-panel motion-float">
             <figure className="hero-media-shell">
-              <Image
-                src="/images/dj/dj-press-live-performance.jpg"
-                alt="DJ Press live performance at a premium event"
+              <FallbackImage
+                src={heroImage}
+                fallbackSrc="/images/dj/dj-press-live-performance.jpg"
+                alt={`${siteContent.branding.siteName} live performance at a premium event`}
                 width={980}
                 height={780}
                 className="hero-media-image"
@@ -84,8 +128,9 @@ export default async function HomePage() {
             <div className="mt-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-white md:text-xl">Why Clients Book DJ Press</h2>
               <span className="hero-support-mark" aria-hidden="true">
-                <Image
-                  src="/images/branding/dj-press-logo-press.png"
+                <FallbackImage
+                  src={logoImage}
+                  fallbackSrc="/images/branding/dj-press-logo-press.png"
                   alt="PRESS turntable brand mark"
                   width={38}
                   height={38}
@@ -104,11 +149,13 @@ export default async function HomePage() {
           </aside>
         </div>
       </section>
+      ) : null}
 
       <section className="section-shell">
         <Reveal className="container-width">
-          <p className="section-kicker">Featured Experience</p>
-          <h2 className="text-3xl font-bold text-white md:text-4xl">Why Events Feel Different with DJ Press</h2>
+          <p className="section-kicker">{homepageFeatured.kicker}</p>
+          <h2 className="text-3xl font-bold text-white md:text-4xl">{homepageFeatured.title}</h2>
+          <p className="mt-3 max-w-3xl text-slate-300">{homepageFeatured.description}</p>
           <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="experience-grid mt-0">
               {featuredExperiencePillars.map((pillar) => (
@@ -146,8 +193,9 @@ export default async function HomePage() {
 
       <section className="section-shell">
         <Reveal className="container-width">
-          <p className="section-kicker">Trust & Performance</p>
-          <h2 className="text-3xl font-bold text-white md:text-4xl">Why Book DJ Press International</h2>
+          <p className="section-kicker">{homepageTrust.kicker}</p>
+          <h2 className="text-3xl font-bold text-white md:text-4xl">{homepageTrust.title}</h2>
+          <p className="mt-3 max-w-3xl text-slate-300">{homepageTrust.description}</p>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <article className="premium-card"><h3 className="text-xl text-white">Energy + Control</h3><p className="mt-2 text-slate-300">Dynamic crowd engagement without sacrificing timeline precision.</p></article>
             <article className="premium-card"><h3 className="text-xl text-white">Genre Versatility</h3><p className="mt-2 text-slate-300">Hip-Hop, R&B, Afrobeat, Reggae, Classics, and event-specific blends.</p></article>
@@ -160,21 +208,23 @@ export default async function HomePage() {
         <Reveal className="container-width">
           <div className="spotlight-card grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
             <div>
-              <p className="text-xs font-extrabold uppercase tracking-wider text-luxeBlue">Event Spotlight</p>
+              <p className="text-xs font-extrabold uppercase tracking-wider text-luxeBlue">{homepageFinalCta.kicker}</p>
               <h2 className="mt-2 text-3xl font-bold text-white md:text-4xl">Luxury Wedding + Afterparty Flow</h2>
               <p className="mt-3 max-w-2xl text-slate-300">From ceremony transitions to peak-hour dance energy, DJ Press International builds cinematic event momentum with polished pacing and premium sound architecture.</p>
             </div>
-            <Link href="/booking" className="btn-primary">Reserve Your Date</Link>
+            <Link href="/booking" className="btn-primary">{homepageFinalCta.primaryCtaLabel}</Link>
           </div>
         </Reveal>
       </section>
 
+      {visibility.homepageServices ? (
       <section className="section-shell">
         <Reveal className="container-width">
-          <p className="section-kicker">Event Coverage</p>
-          <h2 className="text-3xl font-bold text-white">Event Types</h2>
+          <p className="section-kicker">{siteContent.servicesIntro.kicker}</p>
+          <h2 className="text-3xl font-bold text-white">{siteContent.servicesIntro.title}</h2>
+          <p className="mt-3 max-w-3xl text-slate-300">{siteContent.servicesIntro.description}</p>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {serviceTypes.slice(0, 6).map((service) => (
+            {serviceItems.slice(0, 6).map((service) => (
               <article key={service.title} className="premium-card">
                 <h3 className="text-lg text-white">{service.title}</h3>
                 <p className="mt-2 text-sm text-slate-300">{service.description}</p>
@@ -187,14 +237,27 @@ export default async function HomePage() {
           </div>
         </Reveal>
       </section>
+      ) : null}
 
+      {visibility.homepagePackages ? (
       <section className="section-shell">
         <Reveal className="container-width">
-          <p className="section-kicker">Pricing</p>
-          <h2 className="text-3xl font-bold text-white">Featured Packages</h2>
+          <p className="section-kicker">{siteContent.packagesIntro.kicker}</p>
+          <h2 className="text-3xl font-bold text-white">{siteContent.packagesIntro.title}</h2>
+          <p className="mt-3 max-w-3xl text-slate-300">{siteContent.packagesIntro.description}</p>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {packageTiers.map((tier) => (
+            {packageItems.map((tier) => (
               <article key={tier.name} className={`premium-card ${tier.featured ? "package-card-featured" : ""}`}>
+                {tier.image ? (
+                  <FallbackImage
+                    src={tier.image}
+                    fallbackSrc="/images/dj/dj-press-live-performance.jpg"
+                    alt={`${tier.name} package image`}
+                    width={900}
+                    height={520}
+                    className="mb-3 h-[180px] w-full rounded-xl object-cover"
+                  />
+                ) : null}
                 <span className="rounded-full border border-luxeBlue/40 bg-luxeBlue/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-luxeBlue">Starting at {tier.startingAt}</span>
                 <h3 className="mt-3 text-xl text-white">{tier.name}</h3>
                 <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Best for: {tier.bestFor}</p>
@@ -209,11 +272,13 @@ export default async function HomePage() {
           </div>
         </Reveal>
       </section>
+      ) : null}
 
       <section className="section-shell">
         <Reveal className="container-width">
-          <p className="section-kicker">Event Highlights</p>
-          <h2 className="text-3xl font-bold text-white">Experiences We Build</h2>
+          <p className="section-kicker">{homepageHighlights.kicker}</p>
+          <h2 className="text-3xl font-bold text-white">{homepageHighlights.title}</h2>
+          <p className="mt-3 max-w-3xl text-slate-300">{homepageHighlights.description}</p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {eventHighlights.map((highlight) => (
               <article className="event-highlight-card" key={highlight.title}>
@@ -242,16 +307,18 @@ export default async function HomePage() {
         </Reveal>
       </section>
 
+      {visibility.homepageGallery ? (
       <section className="section-shell">
         <Reveal className="container-width">
           <div className="mb-5 flex flex-col items-start gap-3 md:flex-row md:items-end md:justify-between">
-            <p className="section-kicker">Experience</p>
-            <h2 className="text-3xl font-bold text-white">Gallery Preview</h2>
+            <p className="section-kicker">{siteContent.galleryIntro.kicker}</p>
+            <h2 className="text-3xl font-bold text-white">{siteContent.galleryIntro.title}</h2>
             <Link href="/gallery" className="btn-secondary">View Gallery</Link>
           </div>
+          <p className="mb-5 max-w-3xl text-slate-300">{siteContent.galleryIntro.description}</p>
           <div className="grid gap-4 md:grid-cols-3">
             {galleryItems.slice(0, 3).map((item) => (
-              <figure key={item.title} className="gallery-shell">
+              <figure key={item.id} className="gallery-shell">
                 <Image src={item.image} alt={item.alt} width={800} height={500} className="h-[235px] w-full object-cover" />
                 <figcaption className="p-3 text-sm font-semibold text-slate-200">
                   {item.title}
@@ -262,16 +329,19 @@ export default async function HomePage() {
           </div>
         </Reveal>
       </section>
+      ) : null}
 
+      {visibility.homepageReviews ? (
       <section className="section-shell">
         <Reveal className="container-width">
           <div className="mb-5 flex flex-col items-start gap-3 md:flex-row md:items-end md:justify-between">
-            <p className="section-kicker">Social Proof</p>
-            <h2 className="text-3xl font-bold text-white">Client Reviews</h2>
+            <p className="section-kicker">{siteContent.reviewsIntro.kicker}</p>
+            <h2 className="text-3xl font-bold text-white">{siteContent.reviewsIntro.title}</h2>
             <Link href="/reviews" className="btn-secondary">Read More</Link>
           </div>
+          <p className="mb-5 max-w-3xl text-slate-300">{siteContent.reviewsIntro.description}</p>
           <div className="grid gap-4 md:grid-cols-3">
-            {testimonials.map((review) => (
+            {reviewItems.map((review) => (
               <article className="quote-card" key={review.id}>
                 <p className="text-luxeGold">{"★".repeat(review.rating)}</p>
                 <h3 className="mt-2 text-lg text-white">{review.eventType}</h3>
@@ -291,21 +361,24 @@ export default async function HomePage() {
           </div>
         </Reveal>
       </section>
+      ) : null}
 
+      {visibility.homepageAbout ? (
       <section className="section-shell pb-16">
         <Reveal className="container-width cta-cinematic">
-          <p className="section-kicker">Reserve Your Date</p>
-          <h2 className="text-3xl font-bold text-white">{siteContact.bookingCta.title}</h2>
+          <p className="section-kicker">{homepageFinalCta.kicker}</p>
+          <h2 className="text-3xl font-bold text-white">{homepageFinalCta.title}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
-            {siteContact.bookingCta.description}
+            {homepageFinalCta.description}
           </p>
           <p className="cta-powerline">{siteContact.bookingCta.badge}</p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <Link href="/booking" className="btn-primary">Start Booking Inquiry</Link>
-            <Link href="/contact" className="btn-secondary">Contact Team</Link>
+            <Link href="/booking" className="btn-primary">{homepageFinalCta.primaryCtaLabel}</Link>
+            <Link href="/contact" className="btn-secondary">{homepageFinalCta.secondaryCtaLabel}</Link>
           </div>
         </Reveal>
       </section>
+      ) : null}
     </main>
   );
 }

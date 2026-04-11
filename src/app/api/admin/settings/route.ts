@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { patchSiteSettings, getSiteSettings } from "../../../../lib/site-settings";
 import { requireAdminRequest } from "../../../../lib/admin-auth";
 import { SiteSettings } from "../../../../types/site-settings";
+import { siteSettingsPatchSchema } from "../../../../lib/validators/site-content";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,16 @@ export async function PATCH(request: Request) {
 
   try {
     const body = (await request.json()) as Partial<SiteSettings>;
-    const settings = await patchSiteSettings(body);
+    const parsed = siteSettingsPatchSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: "Invalid settings payload", errors: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const settings = await patchSiteSettings(parsed.data as Partial<SiteSettings>);
     return NextResponse.json({ message: "Settings saved", settings });
   } catch (error) {
     return NextResponse.json(

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getManagedImageUrl } from "../../lib/media";
 import { cn } from "../../utils/cn";
+import { BrandingContent } from "../../types/site-content";
+import { FallbackImage } from "../ui/fallback-image";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -19,12 +21,34 @@ const navItems = [
 ];
 
 interface SiteHeaderProps {
+  branding: BrandingContent;
+  phone: string;
+  phoneHref: string;
   primaryCtaLabel: string;
+  secondaryCtaLabel: string;
 }
 
-export function SiteHeader({ primaryCtaLabel }: SiteHeaderProps) {
+function renderBrandText(text: string) {
+  const match = text.match(/press/i);
+  if (!match || typeof match.index !== "number") {
+    return <span className="truncate">{text}</span>;
+  }
+
+  const start = match.index;
+  const end = start + match[0].length;
+  return (
+    <span className="truncate">
+      {text.slice(0, start)}
+      <span className="text-luxeGold">{text.slice(start, end)}</span>
+      {text.slice(end)}
+    </span>
+  );
+}
+
+export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, secondaryCtaLabel }: SiteHeaderProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const logoImage = getManagedImageUrl(branding.logoImageAsset, branding.logoImage, "/images/branding/dj-press-logo-press.png");
 
   useEffect(() => {
     if (!isMobileMenuOpen) {
@@ -60,15 +84,16 @@ export function SiteHeader({ primaryCtaLabel }: SiteHeaderProps) {
     <header className="sticky top-0 z-[120] border-b border-white/10 bg-[#070a14]/88 backdrop-blur-xl">
       <div className="container-width flex min-h-[76px] items-center justify-between gap-3">
         <Link href="/" className="focusable flex min-w-0 max-w-[74%] items-center gap-2.5 text-sm font-extrabold uppercase tracking-[0.12em] text-slate-100 md:max-w-none md:text-base">
-          <Image
-            src="/images/branding/dj-press-logo-press.png"
-            alt="DJ Press International primary logo"
+          <FallbackImage
+            src={logoImage}
+            fallbackSrc="/images/branding/dj-press-logo-press.png"
+            alt={`${branding.siteName} primary logo`}
             width={36}
             height={36}
             className="h-8 w-8 rounded-full border border-luxeGold/35 object-contain shadow-glow md:h-9 md:w-9"
             priority
           />
-          <span className="truncate">DJ <span className="text-luxeGold">Press</span> International</span>
+          {renderBrandText(branding.logoText || branding.siteName)}
         </Link>
 
         <button
@@ -98,6 +123,9 @@ export function SiteHeader({ primaryCtaLabel }: SiteHeaderProps) {
               </Link>
             );
           })}
+          <a href={phoneHref} className="focusable hidden rounded-lg px-2 py-2 text-sm font-semibold text-slate-300 transition hover:bg-luxeBlue/10 hover:text-white xl:block">
+            {phone}
+          </a>
           <Link href="/booking" className="btn-primary md:ml-2">
             {primaryCtaLabel}
           </Link>
@@ -154,13 +182,13 @@ export function SiteHeader({ primaryCtaLabel }: SiteHeaderProps) {
             {primaryCtaLabel}
           </Link>
 
-          <Link
-            href="/contact"
+          <a
+            href={phoneHref}
             onClick={() => setIsMobileMenuOpen(false)}
             className="focusable mt-1 rounded-xl border border-luxeBlue/40 bg-luxeBlue/10 px-4 py-3 text-center text-sm font-semibold text-slate-100"
           >
-            Contact For Call Details
-          </Link>
+            {secondaryCtaLabel}: {phone}
+          </a>
         </nav>
       </div>
     </header>
