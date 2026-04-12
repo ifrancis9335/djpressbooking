@@ -89,6 +89,11 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
+function warnAdminLoadFailure(section: "settings" | "content" | "dashboard" | "availability", error: unknown) {
+  console.warn(`[admin-dashboard] ${section} load failed`, error);
+  console.warn("[ADMIN LOAD PARTIAL FAILURE]", error);
+}
+
 export function AdminDashboard() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -125,7 +130,7 @@ export function AdminDashboard() {
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const [settingsPayload, contentPayload, summaryPayload, blockedPayload] = await Promise.all([
+      const [settingsResult, contentResult, summaryResult, blockedResult] = await Promise.allSettled([
         fetch("/api/admin/settings", { cache: "no-store" }).then((res) => parseResponse<{ settings: SiteSettings }>(res)),
         fetch("/api/admin/content", { cache: "no-store" }).then((res) => parseResponse<{ content: SiteContent }>(res)),
         fetch("/api/admin/dashboard", { cache: "no-store" }).then((res) => parseResponse<{ summary: DashboardSummary }>(res)),
@@ -134,16 +139,37 @@ export function AdminDashboard() {
         )
       ]);
 
-      setSettings(settingsPayload.settings);
-      setContent(contentPayload.content);
-      setSummary(summaryPayload.summary);
-      setBlockedDates(blockedPayload.blockedDates);
-      setAuthenticated(true);
-      setAuthError(null);
+      if (settingsResult.status === "rejected") {
+        warnAdminLoadFailure("settings", settingsResult.reason);
+      }
+
+      if (contentResult.status === "rejected") {
+        warnAdminLoadFailure("content", contentResult.reason);
+      }
+
+      if (summaryResult.status === "rejected") {
+        warnAdminLoadFailure("dashboard", summaryResult.reason);
+      }
+
+      if (blockedResult.status === "rejected") {
+        warnAdminLoadFailure("availability", blockedResult.reason);
+      }
+
+      setSettings(settingsResult.status === "fulfilled" ? settingsResult.value.settings : defaultSettings);
+      setContent(contentResult.status === "fulfilled" ? contentResult.value.content : defaultSiteContent);
+      setSummary(summaryResult.status === "fulfilled" ? summaryResult.value.summary : null);
+      setBlockedDates(blockedResult.status === "fulfilled" ? blockedResult.value.blockedDates : []);
+
+      if (
+        settingsResult.status === "fulfilled" ||
+        contentResult.status === "fulfilled" ||
+        summaryResult.status === "fulfilled"
+      ) {
+        setAuthenticated(true);
+        setAuthError(null);
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to load admin dashboard";
-      setAuthenticated(false);
-      setAuthError(message === "Unauthorized" ? null : message);
+      console.warn("[ADMIN LOAD PARTIAL FAILURE]", error);
     } finally {
       setLoading(false);
     }
@@ -162,6 +188,7 @@ export function AdminDashboard() {
         body: JSON.stringify({ password })
       });
       await parseResponse<{ message: string }>(response);
+      setAuthenticated(true);
       setAuthMessage("Authenticated successfully.");
       await loadDashboard();
     } catch (error) {
