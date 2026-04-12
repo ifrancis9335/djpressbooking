@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { unstable_noStore as noStore } from "next/cache";
+import { logAdminDebug, logAdminDebugError } from "./admin-debug";
 import { packageTiers as defaultPackageTiers } from "../data/packages";
 import { siteContact as defaultSiteContact } from "../data/site";
 import { PublicSiteData, SiteSettings } from "../types/site-settings";
@@ -98,8 +99,10 @@ export async function getSiteSettings(): Promise<SiteSettings> {
   noStore();
   try {
     const raw = await fs.readFile(siteSettingsPath, "utf8");
+    logAdminDebug("site_settings_read_success", { bytes: raw.length });
     return normalizeSettings(JSON.parse(raw));
-  } catch {
+  } catch (error) {
+    logAdminDebugError("site_settings_read_error", error, { fallback: true });
     return defaultSettings;
   }
 }
@@ -107,6 +110,10 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 export async function saveSiteSettings(next: SiteSettings): Promise<SiteSettings> {
   const normalized = normalizeSettings(next);
   await fs.writeFile(siteSettingsPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  logAdminDebug("site_settings_saved", {
+    hasContent: Boolean(normalized.content),
+    bookingEnabled: normalized.booking.enabled
+  });
   return normalized;
 }
 

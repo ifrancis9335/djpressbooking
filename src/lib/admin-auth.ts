@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { logAdminDebug } from "./admin-debug";
 
 export const ADMIN_SESSION_COOKIE = "dj_admin_session";
 
@@ -61,12 +62,16 @@ export function isAuthorizedAdminRequest(request: Request) {
 
 export function requireAdminRequest(request: Request): string | null {
   if (!isAdminConfigured()) {
+    logAdminDebug("auth_check_failed", { reason: "admin_not_configured", url: request.url });
     return "Admin credentials are not configured.";
   }
 
   if (!isAuthorizedAdminRequest(request)) {
+    logAdminDebug("auth_check_failed", { reason: "unauthorized", url: request.url });
     return "Unauthorized";
   }
+
+  logAdminDebug("auth_check_passed", { url: request.url });
 
   return null;
 }

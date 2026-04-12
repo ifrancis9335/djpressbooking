@@ -1,4 +1,5 @@
 import "server-only";
+import { logAdminDebug, logAdminDebugError } from "./admin-debug";
 import { getDb } from "./db";
 
 export type BlockedDateStatus = "blocked" | "available";
@@ -63,24 +64,30 @@ export async function getBlockedDateByEventDate(date: string): Promise<BlockedDa
 }
 
 export async function listBlockedDates(): Promise<BlockedDateRow[]> {
-  const db = getDb();
-  const result = await db.query<{
-    id: number;
-    event_date: string;
-    status: BlockedDateStatus;
-    note: string | null;
-    created_at: string | Date;
-    updated_at: string | Date;
-  }>(
-    `
-      SELECT id, event_date, status, note, created_at, updated_at
-      FROM blocked_dates
-      WHERE status = 'blocked'
-      ORDER BY event_date ASC
-    `
-  );
+  try {
+    const db = getDb();
+    const result = await db.query<{
+      id: number;
+      event_date: string;
+      status: BlockedDateStatus;
+      note: string | null;
+      created_at: string | Date;
+      updated_at: string | Date;
+    }>(
+      `
+        SELECT id, event_date, status, note, created_at, updated_at
+        FROM blocked_dates
+        WHERE status = 'blocked'
+        ORDER BY event_date ASC
+      `
+    );
 
-  return result.rows.map(mapBlockedDateRow);
+    logAdminDebug("blocked_dates_list_success", { count: result.rowCount ?? result.rows.length });
+    return result.rows.map(mapBlockedDateRow);
+  } catch (error) {
+    logAdminDebugError("blocked_dates_list_error", error);
+    throw error;
+  }
 }
 
 export async function listBlockedDatesForMonth(monthIso: string): Promise<BlockedDateRow[]> {
