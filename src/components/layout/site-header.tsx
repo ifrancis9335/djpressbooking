@@ -52,12 +52,8 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
   const logoImage = getManagedImageUrl(branding.logoImageAsset, branding.logoImage, "/images/branding/dj-press-logo-press.png");
 
   useEffect(() => {
-    if (!isMobileMenuOpen) {
-      return;
-    }
-
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "auto";
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -133,65 +129,79 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
         </nav>
       </div>
 
-      <div
-        className={cn(
-          "fixed inset-x-0 bottom-0 top-[76px] bg-black/65 backdrop-blur-[2px] transition-opacity duration-200 md:hidden",
-          isMobileMenuOpen ? "pointer-events-auto z-[125] opacity-100" : "pointer-events-none -z-10 opacity-0"
-        )}
-        onClick={() => setIsMobileMenuOpen(false)}
-        aria-hidden="true"
-      />
+      {isMobileMenuOpen ? (
+        <div
+          id="mobile-menu-drawer"
+          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile main navigation"
+        >
+          <div className="relative flex min-h-screen flex-col overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Close mobile menu"
+              className="focusable absolute right-5 top-5 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-semibold leading-none text-white transition hover:bg-blue-500/20"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
 
-      <div
-        id="mobile-menu-drawer"
-        className={cn(
-          "fixed inset-x-3 top-[84px] max-h-[calc(100vh-96px)] overflow-y-auto rounded-2xl border border-white/15 bg-[#090f1f]/98 p-3 shadow-panel transition-all duration-200 ease-out md:hidden",
-          isMobileMenuOpen
-            ? "z-[130] translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-2 opacity-0"
-        )}
-      >
-        <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-2">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-300">Menu</p>
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="focusable rounded-lg border border-white/20 px-2.5 py-1 text-xs font-semibold text-slate-200"
-          >
-            Close
-          </button>
+            <div className="container-width flex w-full flex-1 flex-col px-0 pb-8 pt-24">
+              <div className="mb-6 flex items-center gap-3 border-b border-white/10 pb-5">
+                <FallbackImage
+                  src={logoImage}
+                  fallbackSrc="/images/branding/dj-press-logo-press.png"
+                  alt={`${branding.siteName} primary logo`}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 rounded-full border border-luxeGold/35 object-contain shadow-glow"
+                />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Navigation</p>
+                  <p className="truncate text-base font-semibold text-white">{branding.logoText || branding.siteName}</p>
+                </div>
+              </div>
+
+              <nav className="flex flex-col gap-4" aria-label="Mobile main navigation">
+                {navItems.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        "focusable w-full rounded-xl border border-white/10 px-5 py-4 text-left text-[18px] font-medium text-white transition hover:bg-blue-500/20",
+                        active && "border-luxeBlue/50 bg-gradient-to-r from-luxeBlue/25 to-luxePurple/20 shadow-glow"
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+
+                <Link
+                  href="/booking"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="focusable mt-2 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-luxeBlue to-[#0072ff] px-5 py-4 text-[18px] font-semibold text-white transition hover:brightness-110"
+                >
+                  {primaryCtaLabel}
+                </Link>
+
+                <a
+                  href={phoneHref}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="focusable w-full rounded-xl border border-white/10 px-5 py-4 text-left text-[18px] font-medium text-white transition hover:bg-blue-500/20"
+                >
+                  {secondaryCtaLabel}: {phone}
+                </a>
+              </nav>
+            </div>
+          </div>
         </div>
-        <nav className="flex flex-col gap-1.5" aria-label="Mobile main navigation">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  "focusable rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-luxeBlue/45 hover:bg-luxeBlue/10 hover:text-white",
-                  active && "border-luxeBlue/45 bg-gradient-to-r from-luxeBlue/25 to-luxePurple/20 text-white"
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-          <Link href="/booking" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary mt-1">
-            {primaryCtaLabel}
-          </Link>
-
-          <a
-            href={phoneHref}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="focusable mt-1 rounded-xl border border-luxeBlue/40 bg-luxeBlue/10 px-4 py-3 text-center text-sm font-semibold text-slate-100"
-          >
-            {secondaryCtaLabel}: {phone}
-          </a>
-        </nav>
-      </div>
+      ) : null}
     </header>
   );
 }
