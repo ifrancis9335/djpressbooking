@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { getManagedImageUrl } from "../../lib/media";
 import { cn } from "../../utils/cn";
 import { BrandingContent } from "../../types/site-content";
@@ -48,12 +49,26 @@ function renderBrandText(text: string) {
 
 export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, secondaryCtaLabel }: SiteHeaderProps) {
   const pathname = usePathname();
+  const [hasMounted, setHasMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const logoImage = getManagedImageUrl(branding.logoImageAsset, branding.logoImage, "/images/branding/dj-press-logo-press.png");
 
   useEffect(() => {
+    setHasMounted(true);
+
+    return () => {
+      setHasMounted(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      document.body.style.overflow = "auto";
+      return;
+    }
+
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "auto";
+    document.body.style.overflow = "hidden";
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -77,78 +92,19 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isMobileMenuOpen]);
 
-  return (
-    <header className="sticky top-0 z-[120] border-b border-white/10 bg-[#070a14]/88 backdrop-blur-xl">
-      <div className="container-width flex min-h-[76px] items-center justify-between gap-3">
-        <Link href="/" className="focusable flex min-w-0 max-w-[74%] items-center gap-2.5 text-sm font-extrabold uppercase tracking-[0.12em] text-slate-100 md:max-w-none md:text-base">
-          <FallbackImage
-            src={logoImage}
-            fallbackSrc="/images/branding/dj-press-logo-press.png"
-            alt={`${branding.siteName} primary logo`}
-            width={36}
-            height={36}
-            className="h-8 w-8 rounded-full border border-luxeGold/35 object-contain shadow-glow md:h-9 md:w-9"
-            priority
-          />
-          {renderBrandText(branding.logoText || branding.siteName)}
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-          aria-expanded={isMobileMenuOpen}
-          aria-controls="mobile-menu-drawer"
-          className="focusable rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 md:hidden"
-        >
-          {isMobileMenuOpen ? "Close" : "Menu"}
-        </button>
-
-        <nav className="hidden md:flex md:items-center md:gap-2">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "focusable block border-b border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-luxeBlue/10 hover:text-white md:rounded-lg md:border-0 md:px-3 md:py-2",
-                  active && "bg-gradient-to-r from-luxeBlue/25 to-luxePurple/20 text-white md:shadow-glow md:ring-1 md:ring-luxeBlue/45"
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-          <a href={phoneHref} className="focusable hidden rounded-lg px-2 py-2 text-sm font-semibold text-slate-300 transition hover:bg-luxeBlue/10 hover:text-white xl:block">
-            {phone}
-          </a>
-          <Link href="/booking" className="btn-primary md:ml-2">
-            {primaryCtaLabel}
-          </Link>
-        </nav>
-      </div>
-
-      {isMobileMenuOpen ? (
-        <div
-          id="mobile-menu-drawer"
-          className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md md:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile main navigation"
-        >
-          <div className="relative flex min-h-screen flex-col overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(false)}
-              aria-label="Close mobile menu"
-              className="focusable absolute right-5 top-5 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-semibold leading-none text-white transition hover:bg-blue-500/20"
-            >
-              <span aria-hidden="true">×</span>
-            </button>
-
-            <div className="container-width flex w-full flex-1 flex-col px-0 pb-8 pt-24">
-              <div className="mb-6 flex items-center gap-3 border-b border-white/10 pb-5">
+  const mobileMenuOverlay = hasMounted && isMobileMenuOpen
+    ? createPortal(
+      <div
+        id="mobile-menu-drawer"
+        className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-md md:hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile main navigation"
+      >
+        <div className="flex min-h-[100dvh] flex-col overflow-y-auto">
+          <div className="container-width flex w-full flex-1 flex-col pb-8 pt-6">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5 pt-1">
+              <div className="flex min-w-0 items-center gap-3 pr-3">
                 <FallbackImage
                   src={logoImage}
                   fallbackSrc="/images/branding/dj-press-logo-press.png"
@@ -163,6 +119,17 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
                 </div>
               </div>
 
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Close mobile menu"
+                className="focusable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-2xl font-semibold leading-none text-white transition hover:bg-blue-500/20"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <div className="flex flex-1 flex-col pt-24">
               <nav className="flex flex-col gap-4" aria-label="Mobile main navigation">
                 {navItems.map((item) => {
                   const active = pathname === item.href;
@@ -173,8 +140,8 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
                       aria-current={active ? "page" : undefined}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
-                        "focusable w-full rounded-xl border border-white/10 px-5 py-4 text-left text-[18px] font-medium text-white transition hover:bg-blue-500/20",
-                        active && "border-luxeBlue/50 bg-gradient-to-r from-luxeBlue/25 to-luxePurple/20 shadow-glow"
+                        "focusable w-full text-left px-5 py-4 rounded-xl border border-white/10 bg-slate-900 text-white transition hover:bg-blue-500/20",
+                        active && "border-luxeBlue/60 bg-gradient-to-r from-[#0d2742] to-[#112f57] shadow-glow"
                       )}
                     >
                       {item.label}
@@ -193,7 +160,7 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
                 <a
                   href={phoneHref}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="focusable w-full rounded-xl border border-white/10 px-5 py-4 text-left text-[18px] font-medium text-white transition hover:bg-blue-500/20"
+                  className="focusable w-full text-left px-5 py-4 rounded-xl border border-white/10 bg-slate-900 text-white transition hover:bg-blue-500/20"
                 >
                   {secondaryCtaLabel}: {phone}
                 </a>
@@ -201,7 +168,66 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
             </div>
           </div>
         </div>
-      ) : null}
-    </header>
+      </div>,
+      document.body
+    )
+    : null;
+
+  return (
+    <>
+      <header className="sticky top-0 z-[120] border-b border-white/10 bg-[#070a14]/88 backdrop-blur-xl">
+        <div className="container-width flex min-h-[76px] items-center justify-between gap-3">
+          <Link href="/" className="focusable flex min-w-0 max-w-[74%] items-center gap-2.5 text-sm font-extrabold uppercase tracking-[0.12em] text-slate-100 md:max-w-none md:text-base">
+            <FallbackImage
+              src={logoImage}
+              fallbackSrc="/images/branding/dj-press-logo-press.png"
+              alt={`${branding.siteName} primary logo`}
+              width={36}
+              height={36}
+              className="h-8 w-8 rounded-full border border-luxeGold/35 object-contain shadow-glow md:h-9 md:w-9"
+              priority
+            />
+            {renderBrandText(branding.logoText || branding.siteName)}
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu-drawer"
+            className="focusable rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-100 md:hidden"
+          >
+            {isMobileMenuOpen ? "Close" : "Menu"}
+          </button>
+
+          <nav className="hidden md:flex md:items-center md:gap-2">
+            {navItems.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "focusable block border-b border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-luxeBlue/10 hover:text-white md:rounded-lg md:border-0 md:px-3 md:py-2",
+                    active && "bg-gradient-to-r from-luxeBlue/25 to-luxePurple/20 text-white md:shadow-glow md:ring-1 md:ring-luxeBlue/45"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+            <a href={phoneHref} className="focusable hidden rounded-lg px-2 py-2 text-sm font-semibold text-slate-300 transition hover:bg-luxeBlue/10 hover:text-white xl:block">
+              {phone}
+            </a>
+            <Link href="/booking" className="btn-primary md:ml-2">
+              {primaryCtaLabel}
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {mobileMenuOverlay}
+    </>
   );
 }
