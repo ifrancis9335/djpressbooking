@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAdminActivity } from "../../../../lib/admin-activity";
 import { createBookingMessage, listCustomerBookingMessages, verifyBookingReplyToken } from "../../../../lib/booking-threads";
 import { getSiteSettings } from "../../../../lib/site-settings";
 import { sendBookingThreadCustomerReplyNotifications } from "../../../../lib/notifications";
@@ -60,6 +61,17 @@ export async function POST(request: Request) {
       senderType: "customer",
       body: body.body,
       read: false
+    });
+
+    await logAdminActivity({
+      bookingId: booking.id,
+      action: "customer_reply_received",
+      actorType: "customer",
+      summary: `Customer reply received from ${booking.fullName}`,
+      booking,
+      metadata: {
+        messagePreview: message.body.slice(0, 160)
+      }
     });
 
     const siteSettings = await getSiteSettings();

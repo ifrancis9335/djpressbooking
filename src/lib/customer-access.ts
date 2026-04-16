@@ -128,7 +128,7 @@ export async function listCustomerBookingHistory(email: string) {
 
   const items = await Promise.all(
     bookings.map(async (booking) => {
-      const latestMessage = await getLatestBookingMessage(booking.id);
+      const latestMessage = await getLatestBookingMessage(booking.id, { includeInternal: false });
       return {
         booking,
         latestMessageBody: latestMessage?.body || "No messages yet.",

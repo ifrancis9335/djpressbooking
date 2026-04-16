@@ -14,6 +14,10 @@ export interface DashboardSummary {
   publicPhoneNumber: string;
   publicEmail: string;
   bookingEnabled: boolean;
+  totalBookings: number;
+  bookingsAwaitingResponse: number;
+  upcomingConfirmedBookings: number;
+  recentActivityCount: number;
 }
 
 export interface BlockedDateEntry {

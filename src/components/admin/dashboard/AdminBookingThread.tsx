@@ -97,7 +97,7 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
     bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
 
-  const sendMessage = async () => {
+  const sendMessage = async (visibility: "customer" | "internal") => {
     setSending(true);
     setError(null);
     setSuccess(null);
@@ -109,7 +109,7 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
           "Content-Type": "application/json",
           "X-CSRF-Token": readCookieValue("dj_admin_csrf")
         },
-        body: JSON.stringify({ body: draft })
+        body: JSON.stringify({ body: draft, visibility })
       });
 
       const payload = await parseResponse<{ threadMessage: BookingMessage; message: string }>(response);
@@ -149,17 +149,21 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
             {messages.map((message) => {
               const isAdmin = message.senderType === "admin";
               const isCustomer = message.senderType === "customer";
+              const isInternal = message.senderType === "internal";
               return (
                 <article key={message.id} className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow ${
                       isAdmin
                         ? "bg-luxeBlue/80 text-white"
+                        : isInternal
+                          ? "border border-amber-500/25 bg-amber-500/10 text-amber-100"
                         : isCustomer
                           ? "bg-emerald-600/75 text-white"
                           : "bg-white/10 text-slate-100"
                     }`}
                   >
+                    {isInternal ? <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">Internal note</p> : null}
                     <p className="whitespace-pre-wrap">{message.body}</p>
                     <div className="mt-1 flex items-center justify-between gap-3 text-[10px] uppercase tracking-wider text-white/80">
                       <span>{formatTimestamp(message.timestamp)}</span>
@@ -175,17 +179,21 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
 
         <div className="sticky bottom-0 border-t border-white/10 bg-slate-950/95 p-3">
           <label className="field">
-            <span className="field-label">Send Message to Customer</span>
+            <span className="field-label">Customer Message or Internal Note</span>
             <textarea
               className="field-input min-h-[84px]"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Type a message..."
+              placeholder="Type a customer update or save a private admin note..."
             />
           </label>
+          <p className="mt-2 text-xs text-slate-500">Customer messages trigger the normal reply flow. Internal notes stay visible only inside admin.</p>
           <div className="mt-2 flex flex-wrap gap-3">
-            <button type="button" className="btn-primary md:w-auto" disabled={sending} onClick={() => void sendMessage()}>
-              {sending ? "Sending..." : "Send Message"}
+            <button type="button" className="btn-primary md:w-auto" disabled={sending || !draft.trim()} onClick={() => void sendMessage("customer")}>
+              {sending ? "Sending..." : "Send to Customer"}
+            </button>
+            <button type="button" className="btn-secondary md:w-auto" disabled={sending || !draft.trim()} onClick={() => void sendMessage("internal")}>
+              {sending ? "Saving..." : "Save Internal Note"}
             </button>
           </div>
         </div>

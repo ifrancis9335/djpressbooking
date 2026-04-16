@@ -187,7 +187,7 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   return toBooking(doc.id, doc.data() as Partial<Booking>);
 }
 
-export async function updateBookingStatus(id: string, status: BookingStatus): Promise<Booking> {
+export async function updateBookingStatus(id: string, status: BookingStatus): Promise<{ booking: Booking; previousStatus: BookingStatus }> {
   const db = getServerFirestore();
   const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(id);
 
@@ -204,8 +204,11 @@ export async function updateBookingStatus(id: string, status: BookingStatus): Pr
     });
 
     return {
-      ...current,
-      status
+      booking: {
+        ...current,
+        status
+      },
+      previousStatus: current.status
     };
   });
 

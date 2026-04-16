@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAdminRequest } from "../../../../lib/admin-auth";
+import { listAdminActivity } from "../../../../lib/admin-activity";
 import { logAdminDebug, logAdminDebugError } from "../../../../lib/admin-debug";
 import { listBlockedDates } from "../../../../lib/availability-db";
+import { getBookings } from "../../../../lib/bookings";
 import { getSiteSettings } from "../../../../lib/site-settings";
 
 export const runtime = "nodejs";
@@ -16,6 +18,10 @@ export async function GET(request: Request) {
   try {
     const settings = await getSiteSettings();
     let blockedDates = [] as Awaited<ReturnType<typeof listBlockedDates>>;
+    let totalBookings = 0;
+    let bookingsAwaitingResponse = 0;
+    let upcomingConfirmedBookings = 0;
+    let recentActivityCount = 0;
 
     try {
       blockedDates = await listBlockedDates();
@@ -24,6 +30,24 @@ export async function GET(request: Request) {
       // Keep admin dashboard usable even if the blocked-dates Firestore query fails temporarily.
       logAdminDebugError("admin_dashboard_blocked_dates_error", error);
       blockedDates = [];
+    }
+
+    try {
+      const bookings = await getBookings();
+      const todayIso = new Date().toISOString().slice(0, 10);
+      totalBookings = bookings.length;
+      bookingsAwaitingResponse = bookings.filter((booking) => booking.status === "new" || booking.status === "awaiting_response").length;
+      upcomingConfirmedBookings = bookings.filter(
+        (booking) => booking.status === "confirmed" && booking.eventDate >= todayIso
+      ).length;
+    } catch (error) {
+      logAdminDebugError("admin_dashboard_bookings_error", error);
+    }
+
+    try {
+      recentActivityCount = (await listAdminActivity({ limit: 10 })).length;
+    } catch (error) {
+      logAdminDebugError("admin_dashboard_activity_error", error);
     }
 
     const now = new Date();
@@ -45,7 +69,11 @@ export async function GET(request: Request) {
         nextBlockedDate,
         publicPhoneNumber: settings.contact.phone,
         publicEmail: settings.contact.email,
-        bookingEnabled: settings.booking.enabled
+        bookingEnabled: settings.booking.enabled,
+        totalBookings,
+        bookingsAwaitingResponse,
+        upcomingConfirmedBookings,
+        recentActivityCount
       }
     });
   } catch (error) {

@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
+import { logAdminActivity } from "../../../../../../lib/admin-activity";
 import { requireAdminCsrf, requireAdminRequest } from "../../../../../../lib/admin-auth";
+import { getBookingById } from "../../../../../../lib/bookings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -201,6 +203,21 @@ export async function POST(
       bookingId,
       emailId: result.data?.id || ""
     });
+
+    const booking = await getBookingById(bookingId).catch(() => null);
+    await logAdminActivity({
+      bookingId,
+      action: "direct_email_sent",
+      actorType: "admin",
+      summary: `Direct email sent for booking ${bookingId}`,
+      booking,
+      metadata: {
+        recipient: to,
+        subject,
+        emailId: result.data?.id || null
+      }
+    });
+
     return ok("Email sent successfully.", result.data?.id);
   } catch (err) {
     console.error("[direct-email] unexpected_send_error", {
@@ -210,4 +227,5 @@ export async function POST(
     return fail(err instanceof Error ? err.message : "Unexpected email error.", 500);
   }
 }
+
 

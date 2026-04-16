@@ -48,11 +48,18 @@ function normalizeMessageBody(body: string) {
   return body.replace(/\r\n/g, "\n").trim();
 }
 
+function isCustomerVisibleSenderType(senderType: BookingMessageSenderType) {
+  return senderType === "admin" || senderType === "customer" || senderType === "system";
+}
+
 function toBookingMessage(bookingId: string, id: string, data: Partial<BookingMessage>): BookingMessage {
   return {
     id,
     bookingId,
-    senderType: data.senderType === "customer" || data.senderType === "system" ? data.senderType : "admin",
+    senderType:
+      data.senderType === "customer" || data.senderType === "system" || data.senderType === "internal"
+        ? data.senderType
+        : "admin",
     body: data.body ?? "",
     timestamp: toIsoString(data.timestamp),
     read: Boolean(data.read)
@@ -68,14 +75,21 @@ export async function listBookingMessages(bookingId: string): Promise<BookingMes
   return snapshot.docs.map((doc) => toBookingMessage(bookingId, doc.id, doc.data() as Partial<BookingMessage>));
 }
 
-export async function getLatestBookingMessage(bookingId: string): Promise<BookingMessage | null> {
-  const snapshot = await getMessagesCollection(bookingId).orderBy("timestamp", "desc").limit(1).get();
-  if (snapshot.empty) {
-    return null;
+export async function getLatestBookingMessage(
+  bookingId: string,
+  options?: { includeInternal?: boolean }
+): Promise<BookingMessage | null> {
+  const includeInternal = options?.includeInternal ?? true;
+  const snapshot = await getMessagesCollection(bookingId).orderBy("timestamp", "desc").limit(20).get();
+
+  for (const doc of snapshot.docs) {
+    const message = toBookingMessage(bookingId, doc.id, doc.data() as Partial<BookingMessage>);
+    if (includeInternal || isCustomerVisibleSenderType(message.senderType)) {
+      return message;
+    }
   }
 
-  const doc = snapshot.docs[0];
-  return toBookingMessage(bookingId, doc.id, doc.data() as Partial<BookingMessage>);
+  return null;
 }
 
 export async function listAdminBookingMessages(bookingId: string): Promise<BookingMessage[]> {
@@ -107,7 +121,12 @@ export async function listCustomerBookingMessages(bookingId: string): Promise<Bo
   const db = getServerFirestore();
   const messagesRef = getMessagesCollection(bookingId);
   const snapshot = await messagesRef.orderBy("timestamp", "asc").get();
-  const unreadAdminMessages = snapshot.docs.filter((doc) => {
+  const visibleDocs = snapshot.docs.filter((doc) => {
+    const data = doc.data() as Partial<BookingMessage>;
+    return isCustomerVisibleSenderType(data.senderType === "customer" || data.senderType === "system" || data.senderType === "internal" ? data.senderType : "admin");
+  });
+
+  const unreadAdminMessages = visibleDocs.filter((doc) => {
     const data = doc.data() as Partial<BookingMessage>;
     return (data.senderType === "admin" || data.senderType === "system") && !data.read;
   });
@@ -120,7 +139,7 @@ export async function listCustomerBookingMessages(bookingId: string): Promise<Bo
     await batch.commit();
   }
 
-  return snapshot.docs.map((doc) =>
+  return visibleDocs.map((doc) =>
     toBookingMessage(bookingId, doc.id, {
       ...(doc.data() as Partial<BookingMessage>),
       read:
@@ -152,7 +171,7 @@ export async function createBookingMessage(input: {
     senderType: input.senderType,
     body: normalizedBody,
     timestamp: FieldValue.serverTimestamp(),
-    read: typeof input.read === "boolean" ? input.read : false
+    read: typeof input.read === "boolean" ? input.read : input.senderType === "internal"
   });
 
   const saved = await docRef.get();

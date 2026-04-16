@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAdminActivity } from "../../../../../../lib/admin-activity";
 import { requireAdminCsrf, requireAdminRequest } from "../../../../../../lib/admin-auth";
 import { createBookingMessage, listAdminBookingMessages } from "../../../../../../lib/booking-threads";
 import { getBookingById } from "../../../../../../lib/bookings";
@@ -69,17 +70,38 @@ export async function POST(request: Request, context: { params: Promise<{ bookin
       return NextResponse.json({ message: "Booking not found." }, { status: 404 });
     }
 
-    const body = (await request.json().catch(() => null)) as { body?: string } | null;
+    const body = (await request.json().catch(() => null)) as { body?: string; visibility?: "customer" | "internal" } | null;
     if (!body || typeof body.body !== "string") {
       return NextResponse.json({ message: "Message body is required." }, { status: 400 });
     }
 
+    const visibility = body.visibility === "internal" ? "internal" : "customer";
+
     const message = await createBookingMessage({
       bookingId,
-      senderType: "admin",
+      senderType: visibility === "internal" ? "internal" : "admin",
       body: body.body,
-      read: false
+      read: visibility === "internal"
     });
+
+    await logAdminActivity({
+      bookingId,
+      action: visibility === "internal" ? "internal_note_added" : "thread_message_sent",
+      actorType: "admin",
+      summary:
+        visibility === "internal"
+          ? `Internal note added for ${booking.fullName}`
+          : `Admin message sent to ${booking.fullName}`,
+      booking,
+      metadata: {
+        messagePreview: message.body.slice(0, 160),
+        visibility
+      }
+    });
+
+    if (visibility === "internal") {
+      return NextResponse.json({ message: "Internal note saved", threadMessage: message }, { status: 201 });
+    }
 
     const siteSettings = await getSiteSettings();
     const packageLabel = resolvePackageLabel(booking.packageId, siteSettings);

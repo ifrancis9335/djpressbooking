@@ -18,6 +18,7 @@ interface AdminBookingsManagerProps {
   content: SiteContent;
   focusRequest?: BookingFocusRequest | null;
   refreshToken?: number;
+  onBookingMutation?: () => void;
 }
 
 type TimeFilter = "upcoming" | "all";
@@ -65,7 +66,7 @@ function localTodayIso() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-export function AdminBookingsManager({ settings, content, focusRequest = null, refreshToken = 0 }: AdminBookingsManagerProps) {
+export function AdminBookingsManager({ settings, content, focusRequest = null, refreshToken = 0, onBookingMutation }: AdminBookingsManagerProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -125,6 +126,7 @@ export function AdminBookingsManager({ settings, content, focusRequest = null, r
       await parseResponse<{ message: string }>(response);
       setBookings((prev) => prev.map((booking) => (booking.id === id ? { ...booking, status } : booking)));
       setMessage(successLabel);
+      onBookingMutation?.();
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : "Unable to update booking status");
     } finally {

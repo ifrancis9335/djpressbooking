@@ -10,6 +10,7 @@ import { bookingSchema } from "../../../lib/validators/booking";
 import { isoDateSchema } from "../../../lib/validators/api";
 import { BookingStatus } from "../../../types/booking";
 import { requireAdminCsrf, requireAdminRequest } from "../../../lib/admin-auth";
+import { logAdminActivity } from "../../../lib/admin-activity";
 import { isFirebaseAdminConfigured } from "../../../lib/firebase/admin";
 import { getSiteSettings } from "../../../lib/site-settings";
 import { isDateAvailable } from "../../../lib/availability-db";
@@ -113,8 +114,20 @@ export async function PATCH(request: Request) {
     }
 
     const siteSettings = await getSiteSettings();
-    const booking = await updateBookingStatus(body.id, body.status);
+    const { booking, previousStatus } = await updateBookingStatus(body.id, body.status);
     const customerStatus = getCustomerStatus(body.status);
+
+    await logAdminActivity({
+      bookingId: booking.id,
+      action: "booking_status_updated",
+      actorType: "admin",
+      summary: `Booking moved from ${previousStatus.replace(/_/g, " ")} to ${body.status.replace(/_/g, " ")}`,
+      booking,
+      metadata: {
+        previousStatus,
+        nextStatus: body.status
+      }
+    });
 
     if (customerStatus) {
       const packageLabel = resolvePackageLabel(booking.packageId, siteSettings);
@@ -237,6 +250,17 @@ export async function POST(request: Request) {
     }
 
     const booking = await createBooking(cleanedPayload);
+    await logAdminActivity({
+      bookingId: booking.id,
+      action: "booking_created",
+      actorType: "system",
+      summary: `New booking inquiry from ${booking.fullName} for ${booking.eventDate}`,
+      booking,
+      metadata: {
+        packageId: booking.packageId || null,
+        preferredContactMethod: booking.preferredContactMethod
+      }
+    });
     if (isDev) {
       console.info("[bookings] booking_created", { requestId, bookingId: booking.id, date: booking.eventDate });
     }

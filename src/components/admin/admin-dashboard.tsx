@@ -16,6 +16,7 @@ import { defaultSiteContent } from "../../lib/site-content";
 import { AdminDashboardShell } from "./dashboard/AdminDashboardShell";
 import { AdminNotificationsBell } from "./dashboard/AdminNotificationsBell";
 import { AdminNotificationsPanel } from "./dashboard/AdminNotificationsPanel";
+import { AdminActivityFeed } from "./dashboard/AdminActivityFeed";
 import { BlockedDatesManager } from "./dashboard/BlockedDatesManager";
 import { AdminBookingsManager } from "./dashboard/AdminBookingsManager";
 import { ContactSettingsManager } from "./dashboard/ContactSettingsManager";
@@ -341,6 +342,7 @@ export function AdminDashboard() {
   const quickLinks = useMemo(
     () => [
       { href: "#notifications", label: "Notifications" },
+      { href: "#activity-feed", label: "Recent Activity" },
       { href: "#blocked-dates", label: "Blocked Dates" },
       { href: "#bookings-inbox", label: "Bookings Inbox" },
       { href: "#contact-info", label: "Contact Info" },
@@ -461,6 +463,8 @@ export function AdminDashboard() {
         onQuickConfirm={quickConfirmBookingFromNotification}
       />
 
+      <AdminActivityFeed enabled={authenticated} />
+
       <BlockedDatesManager
         blockedDates={blockedDates}
         blockedLoading={blockedLoading}
@@ -483,6 +487,7 @@ export function AdminDashboard() {
         content={content}
         focusRequest={bookingFocusRequest}
         refreshToken={bookingsRefreshToken}
+        onBookingMutation={() => void loadDashboard()}
       />
 
       <ContactSettingsManager

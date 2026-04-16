@@ -1,4 +1,4 @@
-export type BookingMessageSenderType = "admin" | "customer" | "system";
+export type BookingMessageSenderType = "admin" | "customer" | "system" | "internal";
 
 export interface BookingMessage {
   id: string;
