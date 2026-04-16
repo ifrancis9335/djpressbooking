@@ -17,6 +17,7 @@ const navItems = [
   { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
+  { href: "/find-booking", label: "Booking History" },
   { href: "/contact", label: "Contact" }
 ];
 

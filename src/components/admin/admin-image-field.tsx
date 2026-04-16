@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { isManagedUploadUrl } from "../../lib/media";
 import { ManagedImageAsset } from "../../types/site-content";
+import { readCookieValue } from "../../utils/csrf";
 import { FallbackImage } from "../ui/fallback-image";
 
 interface AdminImageFieldProps {
@@ -30,6 +31,7 @@ export function AdminImageField({
   onChange,
   onLegacyClear
 }: AdminImageFieldProps) {
+  const getAdminCsrfHeader = () => ({ "X-CSRF-Token": readCookieValue("dj_admin_csrf") });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -77,6 +79,7 @@ export function AdminImageField({
 
       const response = await fetch("/api/admin/uploads", {
         method: "POST",
+        headers: getAdminCsrfHeader(),
         body: formData
       });
 
@@ -107,7 +110,7 @@ export function AdminImageField({
       if (value?.url && isManagedUploadUrl(value.url)) {
         const response = await fetch("/api/admin/uploads", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAdminCsrfHeader() },
           body: JSON.stringify({ url: value.url })
         });
         const payload = (await response.json().catch(() => null)) as { message?: string } | null;

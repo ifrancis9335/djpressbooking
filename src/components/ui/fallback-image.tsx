@@ -8,6 +8,10 @@ type FallbackImageProps = Omit<ImageProps, "src"> & {
   fallbackSrc: string;
 };
 
+function isExternalUrl(value: string) {
+  return /^https?:\/\//i.test(value);
+}
+
 export function FallbackImage({ src, fallbackSrc, alt, unoptimized, onError, ...props }: FallbackImageProps) {
   const normalizedSrc = src || fallbackSrc;
   const [activeSrc, setActiveSrc] = useState(normalizedSrc);
@@ -21,7 +25,7 @@ export function FallbackImage({ src, fallbackSrc, alt, unoptimized, onError, ...
       {...props}
       src={activeSrc}
       alt={alt}
-      unoptimized={unoptimized || activeSrc.startsWith("blob:")}
+      unoptimized={unoptimized || activeSrc.startsWith("blob:") || isExternalUrl(activeSrc)}
       onError={(event) => {
         if (activeSrc !== fallbackSrc) {
           setActiveSrc(fallbackSrc);

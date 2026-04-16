@@ -1,11 +1,14 @@
 import "server-only";
+import { FieldValue } from "firebase-admin/firestore";
 import { logAdminDebug, logAdminDebugError } from "./admin-debug";
-import { getDb } from "./db";
+import { getServerFirestore } from "./firebase/admin";
 
 export type BlockedDateStatus = "blocked" | "available";
 
+const BLOCKED_DATES_COLLECTION = "blocked_dates";
+
 export interface BlockedDateRow {
-  id: number;
+  id: string;
   eventDate: string;
   status: BlockedDateStatus;
   note: string | null;
@@ -13,77 +16,66 @@ export interface BlockedDateRow {
   updatedAt: string;
 }
 
-function mapBlockedDateRow(row: {
-  id: number;
-  event_date: string | Date;
-  status: BlockedDateStatus;
-  note: string | null;
-  created_at: string | Date;
-  updated_at: string | Date;
-}): BlockedDateRow {
-  const eventDateValue = row.event_date;
-  const eventDate =
-    typeof eventDateValue === "string"
-      ? eventDateValue.slice(0, 10)
-      : `${eventDateValue.getFullYear()}-${String(eventDateValue.getMonth() + 1).padStart(2, "0")}-${String(eventDateValue.getDate()).padStart(2, "0")}`;
+function toIsoString(value: string | Date | { toDate?: () => Date } | undefined) {
+  if (!value) return new Date().toISOString();
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object" && value !== null && "toDate" in value && typeof value.toDate === "function") {
+    return value.toDate().toISOString();
+  }
+  return new Date().toISOString();
+}
 
+function mapBlockedDateDoc(
+  id: string,
+  data: Partial<{
+    date: string;
+    note: string | null;
+    createdAt: string | Date | { toDate?: () => Date };
+    updatedAt: string | Date | { toDate?: () => Date };
+  }>
+): BlockedDateRow {
   return {
-    id: row.id,
-    eventDate,
-    status: row.status,
-    note: row.note,
-    createdAt: new Date(row.created_at).toISOString(),
-    updatedAt: new Date(row.updated_at).toISOString()
+    id,
+    eventDate: data.date ?? id,
+    status: "blocked",
+    note: data.note ?? null,
+    createdAt: toIsoString(data.createdAt),
+    updatedAt: toIsoString(data.updatedAt)
   };
 }
 
-export async function getBlockedDateByEventDate(date: string): Promise<BlockedDateRow | null> {
-  const db = getDb();
-  const result = await db.query<{
-    id: number;
-    event_date: string;
-    status: BlockedDateStatus;
-    note: string | null;
-    created_at: string | Date;
-    updated_at: string | Date;
-  }>(
-    `
-      SELECT id, event_date, status, note, created_at, updated_at
-      FROM blocked_dates
-      WHERE event_date = $1
-      LIMIT 1
-    `,
-    [date]
-  );
+export async function isDateAvailable(date: string): Promise<boolean> {
+  const db = getServerFirestore();
 
-  if (result.rowCount === 0) {
+  const blockedDates = await db.collection(BLOCKED_DATES_COLLECTION)
+    .where("date", "==", date)
+    .get();
+
+  if (!blockedDates.empty) return false;
+
+  return true;
+}
+
+export async function getBlockedDateByEventDate(date: string): Promise<BlockedDateRow | null> {
+  const db = getServerFirestore();
+  const snapshot = await db.collection(BLOCKED_DATES_COLLECTION).where("date", "==", date).limit(1).get();
+
+  if (snapshot.empty) {
     return null;
   }
 
-  return mapBlockedDateRow(result.rows[0]);
+  const doc = snapshot.docs[0];
+  return mapBlockedDateDoc(doc.id, doc.data());
 }
 
 export async function listBlockedDates(): Promise<BlockedDateRow[]> {
   try {
-    const db = getDb();
-    const result = await db.query<{
-      id: number;
-      event_date: string;
-      status: BlockedDateStatus;
-      note: string | null;
-      created_at: string | Date;
-      updated_at: string | Date;
-    }>(
-      `
-        SELECT id, event_date, status, note, created_at, updated_at
-        FROM blocked_dates
-        WHERE status = 'blocked'
-        ORDER BY event_date ASC
-      `
-    );
+    const db = getServerFirestore();
+    const snapshot = await db.collection(BLOCKED_DATES_COLLECTION).orderBy("date", "asc").get();
 
-    logAdminDebug("blocked_dates_list_success", { count: result.rowCount ?? result.rows.length });
-    return result.rows.map(mapBlockedDateRow);
+    logAdminDebug("blocked_dates_list_success", { count: snapshot.size });
+    return snapshot.docs.map((doc) => mapBlockedDateDoc(doc.id, doc.data()));
   } catch (error) {
     logAdminDebugError("blocked_dates_list_error", error);
     throw error;
@@ -91,7 +83,6 @@ export async function listBlockedDates(): Promise<BlockedDateRow[]> {
 }
 
 export async function listBlockedDatesForMonth(monthIso: string): Promise<BlockedDateRow[]> {
-  const db = getDb();
   const [yearRaw, monthRaw] = monthIso.split("-");
   const year = Number(yearRaw);
   const month = Number(monthRaw);
@@ -104,76 +95,49 @@ export async function listBlockedDatesForMonth(monthIso: string): Promise<Blocke
   const lastDay = new Date(year, month, 0).getDate();
   const end = `${yearRaw}-${monthRaw.padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  const result = await db.query<{
-    id: number;
-    event_date: string;
-    status: BlockedDateStatus;
-    note: string | null;
-    created_at: string | Date;
-    updated_at: string | Date;
-  }>(
-    `
-      SELECT id, event_date, status, note, created_at, updated_at
-      FROM blocked_dates
-      WHERE status = 'blocked'
-      AND event_date >= $1
-      AND event_date <= $2
-      ORDER BY event_date ASC
-    `,
-    [start, end]
-  );
+  const db = getServerFirestore();
+  const snapshot = await db.collection(BLOCKED_DATES_COLLECTION)
+    .where("date", ">=", start)
+    .where("date", "<=", end)
+    .orderBy("date", "asc")
+    .get();
 
-  return result.rows.map(mapBlockedDateRow);
+  return snapshot.docs.map((doc) => mapBlockedDateDoc(doc.id, doc.data()));
 }
 
 export async function blockDate(date: string, note?: string): Promise<BlockedDateRow> {
-  const db = getDb();
-  const result = await db.query<{
-    id: number;
-    event_date: string;
-    status: BlockedDateStatus;
-    note: string | null;
-    created_at: string | Date;
-    updated_at: string | Date;
-  }>(
-    `
-      INSERT INTO blocked_dates (event_date, status, note)
-      VALUES ($1, 'blocked', NULLIF($2, ''))
-      ON CONFLICT (event_date)
-      DO UPDATE SET
-        status = 'blocked',
-        note = NULLIF(EXCLUDED.note, ''),
-        updated_at = NOW()
-      RETURNING id, event_date, status, note, created_at, updated_at
-    `,
-    [date, note?.trim() || ""]
+  const db = getServerFirestore();
+  const docRef = db.collection(BLOCKED_DATES_COLLECTION).doc(date);
+  const existing = await docRef.get();
+  const now = FieldValue.serverTimestamp();
+
+  await docRef.set(
+    {
+      date,
+      note: note?.trim() || null,
+      createdAt: existing.exists ? existing.data()?.createdAt ?? now : now,
+      updatedAt: now
+    },
+    { merge: true }
   );
 
-  return mapBlockedDateRow(result.rows[0]);
+  const updated = await docRef.get();
+  return mapBlockedDateDoc(updated.id, updated.data() ?? { date, note: note?.trim() || null });
 }
 
 export async function unblockDate(date: string): Promise<BlockedDateRow | null> {
-  const db = getDb();
-  const result = await db.query<{
-    id: number;
-    event_date: string;
-    status: BlockedDateStatus;
-    note: string | null;
-    created_at: string | Date;
-    updated_at: string | Date;
-  }>(
-    `
-      UPDATE blocked_dates
-      SET status = 'available', note = NULL, updated_at = NOW()
-      WHERE event_date = $1
-      RETURNING id, event_date, status, note, created_at, updated_at
-    `,
-    [date]
-  );
-
-  if (result.rowCount === 0) {
+  const current = await getBlockedDateByEventDate(date);
+  if (!current) {
     return null;
   }
 
-  return mapBlockedDateRow(result.rows[0]);
+  const db = getServerFirestore();
+  await db.collection(BLOCKED_DATES_COLLECTION).doc(current.id).delete();
+
+  return {
+    ...current,
+    status: "available",
+    note: null,
+    updatedAt: new Date().toISOString()
+  };
 }

@@ -1,10 +1,12 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { getServerFirestore } from "./firebase";
+import { getServerFirestore } from "./firebase/admin";
 import { Booking, BookingRequest, BookingStatus } from "../types/booking";
-import { AvailabilityRecord, AvailabilityStatus } from "../types/availability";
+import { AvailabilityRecord } from "../types/availability";
+import { stripUndefinedFields } from "../utils/sanitize";
+import { buildBookingNotificationWritePayload } from "./notifications/store";
 
 const BOOKINGS_COLLECTION = "bookings";
-const AVAILABILITY_COLLECTION = "availability";
+const BLOCKED_DATES_COLLECTION = "blocked_dates";
 
 export class BookingConflictError extends Error {
   constructor(message: string) {
@@ -31,12 +33,6 @@ function toIsoString(value: Booking["createdAt"] | { toDate?: () => Date } | und
   if (typeof value === "string") return value;
   if (typeof value === "object" && value.toDate) return value.toDate().toISOString();
   return new Date().toISOString();
-}
-
-function availabilityFromBookingStatus(status: BookingStatus): AvailabilityStatus {
-  if (status === "confirmed" || status === "completed") return "booked";
-  if (status === "cancelled") return "available";
-  return "pending";
 }
 
 function toBooking(id: string, data: Partial<Booking>): Booking {
@@ -89,72 +85,80 @@ export async function createBooking(payload: BookingRequest): Promise<Booking> {
 
   const db = getServerFirestore();
   const bookingDocRef = db.collection(BOOKINGS_COLLECTION).doc();
-  const availabilityDocRef = db.collection(AVAILABILITY_COLLECTION).doc(payload.eventDate);
+  const isDev = process.env.NODE_ENV !== "production";
 
-  const result = await db.runTransaction(async (transaction) => {
-    const availabilitySnap = await transaction.get(availabilityDocRef);
-    if (availabilitySnap.exists) {
-      const current = availabilitySnap.data() as Partial<AvailabilityRecord>;
-      const status = current.status;
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const blockedDatesQuery = db.collection(BLOCKED_DATES_COLLECTION).where("date", "==", payload.eventDate);
 
-      if (status === "pending") {
-        throw new BookingConflictError("Selected date is awaiting confirmation.");
-      }
-      if (status === "booked" || status === "blocked") {
+      const blockedDateSnapshot = await transaction.get(blockedDatesQuery);
+
+      if (!blockedDateSnapshot.empty) {
         throw new BookingConflictError("Selected date is unavailable.");
       }
-    }
 
-    const nowIso = new Date().toISOString();
-    const booking: Booking = {
-      id: bookingDocRef.id,
-      createdAt: nowIso,
-      status: "awaiting_response",
-      packageId: payload.packageId?.trim() || undefined,
-      addOns: payload.selectedAddOns ?? payload.addOns ?? [],
-      selectedAddOns: payload.selectedAddOns ?? payload.addOns ?? [],
-      specialNotes: payload.specialNotes?.trim() ?? "",
-      fullName: payload.fullName,
-      email: payload.email,
-      phone: payload.phone,
-      eventType: payload.eventType,
-      eventDate: payload.eventDate,
-      startTime: payload.startTime ?? "",
-      endTime: payload.endTime ?? "",
-      venueName: payload.venueName ?? "",
-      venueAddress: payload.venueAddress ?? "",
-      city: payload.city ?? "",
-      settingType: payload.settingType ?? "indoor",
-      guestCount: payload.guestCount ?? 1,
-      genres: payload.genres ?? "",
-      cleanMusic: payload.cleanMusic ?? "yes",
-      mcService: payload.mcService ?? "no",
-      lights: payload.lights ?? "no",
-      budgetRange: payload.budgetRange ?? "",
-      preferredContactMethod: payload.preferredContactMethod
-    };
+      const nowIso = new Date().toISOString();
+      const booking: Booking = {
+        id: bookingDocRef.id,
+        createdAt: nowIso,
+        status: "awaiting_response",
+        packageId: payload.packageId?.trim() || undefined,
+        addOns: payload.selectedAddOns ?? payload.addOns ?? [],
+        selectedAddOns: payload.selectedAddOns ?? payload.addOns ?? [],
+        specialNotes: payload.specialNotes?.trim() ?? "",
+        fullName: payload.fullName,
+        email: payload.email.trim().toLowerCase(),
+        phone: payload.phone,
+        eventType: payload.eventType,
+        eventDate: payload.eventDate,
+        startTime: payload.startTime ?? "",
+        endTime: payload.endTime ?? "",
+        venueName: payload.venueName ?? "",
+        venueAddress: payload.venueAddress ?? "",
+        city: payload.city ?? "",
+        settingType: payload.settingType ?? "indoor",
+        guestCount: payload.guestCount ?? 1,
+        genres: payload.genres ?? "",
+        cleanMusic: payload.cleanMusic ?? "yes",
+        mcService: payload.mcService ?? "no",
+        lights: payload.lights ?? "no",
+        budgetRange: payload.budgetRange ?? "",
+        preferredContactMethod: payload.preferredContactMethod
+      };
 
-    transaction.set(bookingDocRef, {
-      ...booking,
-      createdAt: FieldValue.serverTimestamp()
+      const bookingWritePayloadBeforeClean = {
+        ...booking,
+        createdAt: FieldValue.serverTimestamp()
+      };
+      const bookingWritePayload = stripUndefinedFields(bookingWritePayloadBeforeClean);
+
+      if (isDev) {
+        console.info("[bookings][dev] firestore_payload_before_clean", bookingWritePayloadBeforeClean);
+        console.info("[bookings][dev] firestore_payload_after_clean", bookingWritePayload);
+      }
+
+      transaction.set(bookingDocRef, bookingWritePayload);
+
+      const notificationDocRef = db.collection("notifications").doc();
+      transaction.set(notificationDocRef, buildBookingNotificationWritePayload(booking));
+
+      return booking;
     });
 
-    transaction.set(
-      availabilityDocRef,
-      {
-        date: payload.eventDate,
-        status: "pending" as AvailabilityStatus,
-        note: payload.eventType,
-        bookingId: bookingDocRef.id,
-        updatedAt: FieldValue.serverTimestamp()
-      },
-      { merge: true }
-    );
+    if (isDev) {
+      console.info("[bookings][dev] firestore_write_success", {
+        bookingId: result.id,
+        eventDate: result.eventDate
+      });
+    }
 
-    return booking;
-  });
-
-  return result;
+    return result;
+  } catch (error) {
+    if (isDev) {
+      console.error("[bookings][dev] firestore_write_failure", error);
+    }
+    throw error;
+  }
 }
 
 export async function getBookings(): Promise<Booking[]> {
@@ -199,21 +203,6 @@ export async function updateBookingStatus(id: string, status: BookingStatus): Pr
       updatedAt: FieldValue.serverTimestamp()
     });
 
-    const availabilityRef = db.collection(AVAILABILITY_COLLECTION).doc(current.eventDate);
-    const availabilityStatus = availabilityFromBookingStatus(status);
-
-    transaction.set(
-      availabilityRef,
-      {
-        date: current.eventDate,
-        status: availabilityStatus,
-        bookingId: availabilityStatus === "available" ? null : current.id,
-        note: availabilityStatus === "available" ? "Date reopened" : current.eventType,
-        updatedAt: FieldValue.serverTimestamp()
-      },
-      { merge: true }
-    );
-
     return {
       ...current,
       status
@@ -237,12 +226,55 @@ export async function getAvailabilityForMonth(monthIso: string): Promise<Availab
   const end = `${yearRaw}-${monthRaw.padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
   const db = getServerFirestore();
-  const snapshot = await db
-    .collection(AVAILABILITY_COLLECTION)
-    .where("date", ">=", start)
-    .where("date", "<=", end)
-    .orderBy("date", "asc")
+  const snapshot = await db.collection(BOOKINGS_COLLECTION).where("status", "==", "confirmed").get();
+
+  return snapshot.docs
+    .map((doc) => ({ id: doc.id, ...(doc.data() as Partial<Booking>) }))
+    .filter((booking) => typeof booking.eventDate === "string" && booking.eventDate >= start && booking.eventDate <= end)
+    .sort((left, right) => String(left.eventDate).localeCompare(String(right.eventDate)))
+    .map((booking) => toAvailabilityRecord(String(booking.eventDate), {
+      status: "booked",
+      note: booking.eventType,
+      bookingId: booking.id,
+      updatedAt: booking.createdAt
+    }));
+}
+
+export async function getConfirmedBookingByDate(date: string): Promise<Booking | null> {
+  const db = getServerFirestore();
+  const snapshot = await db.collection(BOOKINGS_COLLECTION)
+    .where("eventDate", "==", date)
+    .where("status", "==", "confirmed")
+    .limit(1)
     .get();
 
-  return snapshot.docs.map((doc) => toAvailabilityRecord(doc.id, doc.data() as Partial<AvailabilityRecord>));
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const confirmedDoc = snapshot.docs[0];
+  return toBooking(confirmedDoc.id, confirmedDoc.data() as Partial<Booking>);
+}
+
+export async function listBookingsByCustomerEmail(email: string): Promise<Booking[]> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) {
+    return [];
+  }
+
+  const db = getServerFirestore();
+  const exactSnapshot = await db.collection(BOOKINGS_COLLECTION).where("email", "==", normalized).get();
+
+  if (!exactSnapshot.empty) {
+    return exactSnapshot.docs
+      .map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>))
+      .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
+  }
+
+  // Backward-compatible fallback for historical rows that may have mixed-case emails.
+  const allSnapshot = await db.collection(BOOKINGS_COLLECTION).get();
+  return allSnapshot.docs
+    .map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>))
+    .filter((booking) => booking.email.trim().toLowerCase() === normalized)
+    .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
 }

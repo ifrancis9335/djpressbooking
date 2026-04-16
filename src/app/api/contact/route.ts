@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createContactMessage, getContactMessages } from "../../../lib/services/contact-service";
 import { contactSchema } from "../../../lib/validators/contact";
 import { requireAdminRequest } from "../../../lib/admin-auth";
+import { checkRateLimit } from "../../../lib/security/rate-limit";
 
 export async function GET(request: Request) {
   const authError = requireAdminRequest(request);
@@ -22,7 +23,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const rateLimit = checkRateLimit(request, "contact-submit", { windowMs: 10 * 60 * 1000, maxRequests: 20 });
+    if (rateLimit.limited) {
+      const response = NextResponse.json({ message: "Too many contact attempts. Please try again later." }, { status: 429 });
+      response.headers.set("Retry-After", String(rateLimit.retryAfterSeconds));
+      return response;
+    }
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 });
+    }
     const parsed = contactSchema.safeParse(body);
 
     if (!parsed.success) {

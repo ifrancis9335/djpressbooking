@@ -1,51 +1,15 @@
-import { cert, getApp, getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getApp, getApps, initializeApp } from "firebase/app";
+import { getStorage } from "firebase/storage";
 
-function normalizePrivateKey(value?: string) {
-  if (!value) return undefined;
-  return value.replace(/\\n/g, "\n");
-}
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+};
 
-function isConfiguredValue(value?: string) {
-  if (!value) return false;
-  const trimmed = value.trim();
-  if (!trimmed) return false;
-  if (trimmed.toLowerCase().startsWith("replace-with-")) return false;
-  return true;
-}
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export function isFirebaseAdminConfigured() {
-  return Boolean(
-    isConfiguredValue(process.env.FIREBASE_PROJECT_ID) &&
-      isConfiguredValue(process.env.FIREBASE_CLIENT_EMAIL) &&
-      isConfiguredValue(process.env.FIREBASE_PRIVATE_KEY)
-  );
-}
-
-function initFirebaseAdmin() {
-  if (getApps().length > 0) {
-    return getApp();
-  }
-
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
-
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error(
-      "Firebase Admin is not configured. Missing FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, or FIREBASE_PRIVATE_KEY."
-    );
-  }
-
-  return initializeApp({
-    credential: cert({
-      projectId,
-      clientEmail,
-      privateKey
-    })
-  });
-}
-
-export function getServerFirestore() {
-  return getFirestore(initFirebaseAdmin());
-}
+export const storage = getStorage(app);

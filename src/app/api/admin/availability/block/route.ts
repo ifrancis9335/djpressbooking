@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { blockDate, getBlockedDateByEventDate } from "../../../../../lib/availability-db";
-import { requireAdminRequest } from "../../../../../lib/admin-auth";
+import { requireAdminCsrf, requireAdminRequest } from "../../../../../lib/admin-auth";
 import { isoDateSchema } from "../../../../../lib/validators/api";
 
 export const runtime = "nodejs";
@@ -15,8 +15,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: authError }, { status: authError === "Unauthorized" ? 401 : 503 });
   }
 
+  const csrfError = requireAdminCsrf(request);
+  if (csrfError) {
+    return NextResponse.json({ message: csrfError }, { status: 403 });
+  }
+
   try {
-    const body = (await request.json()) as { date?: string; note?: string };
+    const body = (await request.json().catch(() => null)) as { date?: string; note?: string } | null;
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 });
+    }
     const parsed = isoDateSchema.safeParse(body?.date);
 
     if (!parsed.success) {

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       blockedDates = await listBlockedDates();
       logAdminDebug("admin_dashboard_blocked_dates_loaded", { count: blockedDates.length });
     } catch (error) {
-      // Keep admin dashboard usable even if blocked-dates DB query fails temporarily.
+      // Keep admin dashboard usable even if the blocked-dates Firestore query fails temporarily.
       logAdminDebugError("admin_dashboard_blocked_dates_error", error);
       blockedDates = [];
     }

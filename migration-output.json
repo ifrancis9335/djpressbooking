@@ -1,0 +1,14 @@
+﻿{
+  "summary": {
+    "bucket": "d832daf2773efa574900a89144fcbbf6ad157b5e",
+    "scannedCount": 0,
+    "migratedCount": 0,
+    "skippedCount": 0,
+    "missingCount": 0,
+    "uniqueMigratedObjects": 0,
+    "uniqueMissingObjects": 0
+  },
+  "migrated": [],
+  "skipped": [],
+  "missingFiles": []
+}

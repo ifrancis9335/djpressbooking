@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { patchSiteSettings, getSiteSettings } from "../../../../lib/site-settings";
-import { requireAdminRequest } from "../../../../lib/admin-auth";
+import { requireAdminCsrf, requireAdminRequest } from "../../../../lib/admin-auth";
 import { logAdminDebug, logAdminDebugError } from "../../../../lib/admin-debug";
 import { SiteSettings } from "../../../../types/site-settings";
 import { siteSettingsPatchSchema } from "../../../../lib/validators/site-content";
@@ -30,8 +30,16 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ message: authError }, { status: authError === "Unauthorized" ? 401 : 503 });
   }
 
+  const csrfError = requireAdminCsrf(request);
+  if (csrfError) {
+    return NextResponse.json({ message: csrfError }, { status: 403 });
+  }
+
   try {
-    const body = (await request.json()) as Partial<SiteSettings>;
+    const body = (await request.json().catch(() => null)) as Partial<SiteSettings> | null;
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 });
+    }
     logAdminDebug("admin_settings_patch_received", { keys: Object.keys(body || {}) });
     const parsed = siteSettingsPatchSchema.safeParse(body);
 

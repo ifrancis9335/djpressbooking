@@ -81,6 +81,7 @@ export function SiteFooter({ branding, siteContact, packageTiers, serviceAreaLin
           <h3 className="text-lg font-bold text-white">Policy & Booking</h3>
           <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:flex sm:flex-wrap sm:gap-3">
             <Link className="footer-link" href="/booking-policy">Booking Policy</Link>
+            <Link className="footer-link" href="/find-booking">Booking History</Link>
             <Link className="footer-link" href="/privacy">Privacy Policy</Link>
             <Link className="footer-link" href="/terms">Terms</Link>
             <Link className="footer-link" href="/contact">Contact</Link>

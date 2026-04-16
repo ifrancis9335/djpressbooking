@@ -5,14 +5,16 @@ import { SiteFooter } from "../components/layout/site-footer";
 import { MobileBookCta } from "../components/layout/mobile-book-cta";
 import { getManagedImageUrl } from "../lib/media";
 import { getPublicSiteData } from "../lib/site-settings";
+import { getPublicBaseUrl } from "../lib/public-url";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { siteContact, siteContent } = await getPublicSiteData();
   const branding = siteContent.branding;
   const logoImage = getManagedImageUrl(branding.logoImageAsset, branding.logoImage, "/images/branding/dj-press-logo-press.png");
+  const siteUrl = getPublicBaseUrl();
 
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+    metadataBase: new URL(siteUrl),
     title: {
       default: `${branding.siteName} | Premium DJ Booking Platform`,
       template: `%s | ${branding.siteName}`
@@ -33,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "DJ Press International",
       description:
         "Luxury event soundtrack design and premium DJ booking for Charleston and surrounding areas.",
-      url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+      url: siteUrl,
       siteName: branding.siteName,
       images: [
         {
@@ -61,6 +63,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { siteContact, packageTiers, siteSettings, siteContent } = await getPublicSiteData();
   const branding = siteContent.branding;
+  const siteUrl = getPublicBaseUrl();
   const primaryCtaLabel = siteContent.homepageHero.primaryCtaLabel || siteSettings.primaryCtaLabel;
   const secondaryCtaLabel = siteContent.homepageHero.secondaryCtaLabel || "Contact";
 
@@ -68,7 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: branding.siteName,
-    url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    url: siteUrl,
     telephone: siteContact.phone,
     email: siteContact.email,
     areaServed: siteContact.serviceArea,

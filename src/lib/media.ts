@@ -11,7 +11,20 @@ export function getManagedImageUrl(asset: ManagedImageAsset | null | undefined, 
 }
 
 export function isManagedUploadUrl(url: string | undefined) {
-  return typeof url === "string" && url.startsWith("/uploads/");
+  if (typeof url !== "string") {
+    return false;
+  }
+
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return (
+    trimmed.startsWith("/uploads/") ||
+    trimmed.startsWith("https://storage.googleapis.com/") ||
+    trimmed.startsWith("https://firebasestorage.googleapis.com/v0/b/")
+  );
 }
 
 export function getUploadExtension(fileName: string, mimeType: string) {

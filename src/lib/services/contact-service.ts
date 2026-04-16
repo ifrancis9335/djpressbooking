@@ -1,6 +1,6 @@
 import { ContactMessage, ContactRequest } from "../../types/contact";
 import { FieldValue } from "firebase-admin/firestore";
-import { getServerFirestore, isFirebaseAdminConfigured } from "../firebase";
+import { getServerFirestore, isFirebaseAdminConfigured } from "../firebase/admin";
 
 const CONTACT_COLLECTION = "contact_submissions";
 

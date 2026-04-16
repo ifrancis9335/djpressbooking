@@ -1,7 +1,5 @@
-import { getServerFirestore } from "./firebase";
+import { getBlockedDateByEventDate, listBlockedDatesForMonth } from "./availability-db";
 import { AvailabilityRecord } from "../types/availability";
-
-const COLLECTION = "availability";
 
 function formatIsoDate(date: Date) {
   const year = date.getFullYear();
@@ -45,24 +43,36 @@ function normalizeRecord(date: string, input?: Partial<AvailabilityRecord>): Ava
 
 export async function getAvailabilityForMonth(monthIso: string): Promise<AvailabilityRecord[]> {
   const { start, end } = monthRange(monthIso);
-  const db = getServerFirestore();
-  const snapshot = await db
-    .collection(COLLECTION)
-    .where("date", ">=", start)
-    .where("date", "<=", end)
-    .orderBy("date", "asc")
-    .get();
+  const blockedDates = await listBlockedDatesForMonth(monthIso);
 
-  return snapshot.docs.map((doc) => normalizeRecord(doc.id, doc.data() as Partial<AvailabilityRecord>));
+  const blockedDateSet = new Set(blockedDates.map((entry) => entry.eventDate));
+  const dates: AvailabilityRecord[] = [];
+
+  const [yearRaw, monthRaw] = monthIso.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const totalDays = new Date(year, month, 0).getDate();
+
+  for (let day = 1; day <= totalDays; day += 1) {
+    const isoDate = `${yearRaw}-${monthRaw.padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    if (blockedDateSet.has(isoDate)) {
+      dates.push(normalizeRecord(isoDate, { status: "blocked", note: "Not available" }));
+      continue;
+    }
+
+    dates.push(normalizeRecord(isoDate, { status: "available" }));
+  }
+
+  return dates.filter((entry) => entry.date >= start && entry.date <= end);
 }
 
 export async function getAvailabilityByDate(date: string): Promise<AvailabilityRecord> {
-  const db = getServerFirestore();
-  const doc = await db.collection(COLLECTION).doc(date).get();
+  const blockedDate = await getBlockedDateByEventDate(date);
 
-  if (!doc.exists) {
-    return normalizeRecord(date, { status: "available" });
+  if (blockedDate?.status === "blocked") {
+    return normalizeRecord(date, { status: "blocked", note: blockedDate.note || "Not available" });
   }
 
-  return normalizeRecord(doc.id, doc.data() as Partial<AvailabilityRecord>);
+  return normalizeRecord(date, { status: "available" });
 }
