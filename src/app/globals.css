@@ -452,28 +452,6 @@ p {
     animation: floatLift 5.5s ease-in-out infinite;
   }
 
-  .mobile-utility-book {
-    @apply fixed z-40 hidden items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-50 shadow-panel transition duration-200 md:hidden;
-    left: max(0.75rem, env(safe-area-inset-left, 0px));
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
-    border-color: rgba(125, 211, 252, 0.42);
-    background: linear-gradient(120deg, rgba(2, 132, 199, 0.34), rgba(79, 70, 229, 0.28));
-    box-shadow: 0 16px 30px rgba(2, 5, 14, 0.56), 0 0 0 1px rgba(125, 211, 252, 0.16) inset;
-  }
-
-  .mobile-utility-book:hover {
-    transform: translateY(-1px);
-    border-color: rgba(250, 204, 21, 0.48);
-  }
-
-  .mobile-utility-book-label {
-    @apply inline-flex h-8 w-8 items-center justify-center rounded-full border border-luxeGold/45 bg-luxeGold/15 text-[10px] text-amber-100;
-  }
-
-  .mobile-utility-book-text {
-    @apply max-w-[11.5rem] truncate;
-  }
-
   body {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
@@ -603,7 +581,7 @@ p {
 
   .chat-widget-shell {
     right: max(0.75rem, env(safe-area-inset-right, 0px));
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem + var(--keyboard-height, 0px));
     width: min(24rem, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1rem));
     max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
   }
@@ -620,8 +598,8 @@ p {
     flex-direction: column;
     overflow: hidden;
     width: 100%;
-    height: min(42rem, calc(100dvh - 6rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
-    max-height: calc(100dvh - 6rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    height: min(42rem, calc(var(--vp-height, 100dvh) - 6rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
+    max-height: calc(var(--vp-height, 100dvh) - 6rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     min-height: 23rem;
     box-shadow: 0 28px 54px rgba(2, 5, 14, 0.66), 0 0 0 1px rgba(127, 214, 255, 0.12) inset;
   }
@@ -629,9 +607,17 @@ p {
   .chat-scroll-area {
     overscroll-behavior: contain;
     scroll-padding-top: 0.5rem;
-    scroll-padding-bottom: 6rem;
+    scroll-padding-bottom: 80px;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: rgba(127, 214, 255, 0.4) transparent;
+  }
+
+  .chat-composer-shell {
+    position: sticky;
+    bottom: 0;
+    z-index: 10000;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .chat-scroll-area::-webkit-scrollbar {
@@ -1056,6 +1042,41 @@ p {
   }
 }
 
+@media (max-width: 768px) {
+  .chat-widget-shell.is-open {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    right: 0;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    padding: 0;
+    align-items: stretch;
+    justify-content: flex-end;
+    z-index: 9999;
+    background: transparent;
+  }
+
+  .chat-widget-shell.is-open .chat-panel-shell {
+    width: 100vw;
+    height: calc(100dvh - var(--keyboard-height, 0px));
+    max-height: calc(100dvh - var(--keyboard-height, 0px));
+    min-height: 0;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    overscroll-behavior: contain;
+  }
+}
+
 @media (max-width: 640px) {
   .public-shell-topbar {
     padding: 0.72rem 0.82rem 0.82rem;
@@ -1102,22 +1123,8 @@ p {
 
   .chat-widget-shell {
     right: max(1.25rem, env(safe-area-inset-right, 0px));
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem + var(--keyboard-height, 0px));
     width: auto;
-  }
-
-  .chat-widget-shell.is-open {
-    left: max(0.5rem, env(safe-area-inset-left, 0px));
-    right: max(0.5rem, env(safe-area-inset-right, 0px));
-    width: auto;
-    align-items: stretch;
-  }
-
-  .chat-panel-shell {
-    border-radius: 1.15rem;
-    height: calc(100dvh - 5.85rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    max-height: calc(100dvh - 5.85rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    min-height: 21.5rem;
   }
 
   .hero-luxury {

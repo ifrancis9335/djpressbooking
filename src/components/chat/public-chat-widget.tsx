@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import type { ChatBookingSessionState, ChatConversationTurn } from "../../lib/chat/types";
 import type { PublicSiteData } from "../../types/site-settings";
@@ -206,35 +206,79 @@ export function PublicChatWidget({ siteName, packageTiers }: PublicChatWidgetPro
       ? "Answer this step, then press Enter to continue."
       : "Enter sends. Shift+Enter adds a line.";
 
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  // Visual Viewport API: keep sheet/composer above iOS keyboard and toolbar changes
+  useEffect(() => {
+    const shell = shellRef.current;
+    const vv = typeof window !== "undefined" ? (window.visualViewport ?? null) : null;
+    if (!shell || !vv || !open) {
+      if (shell) {
+        shell.style.removeProperty("--keyboard-height");
+        shell.style.removeProperty("--vp-height");
+      }
+      return;
+    }
+
+    const update = () => {
+      const keyboardOffset = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+      shell.style.setProperty("--keyboard-height", `${keyboardOffset}px`);
+      shell.style.setProperty("--vp-height", `${vv.height}px`);
+    };
+
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    update();
+
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      shell.style.removeProperty("--keyboard-height");
+      shell.style.removeProperty("--vp-height");
+    };
+  }, [open]);
+
   if (hidden) {
     return null;
   }
 
   return (
-    <div className={`chat-widget-shell fixed z-50 flex flex-col items-end gap-3 ${open ? "is-open" : ""}`}>
+    <>
       {open ? (
-        <PublicChatPanel
-          siteName={siteName}
-          packageTiers={packageTiers}
-          status={status}
-          statusLoading={statusLoading}
-          statusError={statusError}
-          messages={messages}
-          pendingMessage={pendingMessage}
-          sending={sending}
-          sendError={sendError}
-          hasAttempt={Boolean(lastAttempt?.trim())}
-          composerPlaceholder={composerPlaceholder}
-          composerHelperText={composerHelperText}
-          bookingStepQuestion={activeBookingReply?.nextQuestion || null}
-          onChangeMessage={setPendingMessage}
-          onSubmitMessage={() => void submitMessage(pendingMessage)}
-          onPromptSelect={handlePromptSelect}
-          onRetry={retry}
-          onClose={() => setOpen(false)}
+        <button
+          type="button"
+          aria-label="Close assistant"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-[9998] bg-[rgba(0,0,0,0.6)] backdrop-blur-[3px] md:hidden"
         />
       ) : null}
-      {!open ? <PublicChatLauncher open={open} onClick={() => setOpen(true)} className="mobile-utility-ai" /> : null}
-    </div>
+      <div ref={shellRef} className={`chat-widget-shell fixed z-50 flex flex-col items-end gap-3 ${open ? "is-open" : ""}`}>
+        {open ? (
+          <PublicChatPanel
+            siteName={siteName}
+            packageTiers={packageTiers}
+            status={status}
+            statusLoading={statusLoading}
+            statusError={statusError}
+            messages={messages}
+            pendingMessage={pendingMessage}
+            sending={sending}
+            sendError={sendError}
+            hasAttempt={Boolean(lastAttempt?.trim())}
+            composerPlaceholder={composerPlaceholder}
+            composerHelperText={composerHelperText}
+            bookingStepQuestion={activeBookingReply?.nextQuestion || null}
+            onChangeMessage={setPendingMessage}
+            onSubmitMessage={() => void submitMessage(pendingMessage)}
+            onPromptSelect={handlePromptSelect}
+            onRetry={retry}
+            onClose={() => setOpen(false)}
+          />
+        ) : null}
+        {!open ? <PublicChatLauncher open={open} onClick={() => setOpen(true)} className="mobile-utility-ai" /> : null}
+      </div>
+    </>
   );
 }

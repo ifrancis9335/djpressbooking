@@ -59,7 +59,7 @@ export function ContactForm() {
       </div>
       <div className="field mt-4">
         <label className="field-label" htmlFor="message">Message</label>
-        <textarea id="message" rows={6} aria-invalid={Boolean(errors.message)} className={`field-input ${errors.message ? "field-input-invalid" : ""}`} value={form.message} onChange={(e) => { setForm((p) => ({ ...p, message: e.target.value })); setErrors((prev) => ({ ...prev, message: undefined })); }} required />
+        <textarea id="contact-message" rows={6} aria-invalid={Boolean(errors.message)} autoComplete="off" className={`field-input ${errors.message ? "field-input-invalid" : ""}`} value={form.message} onChange={(e) => { setForm((p) => ({ ...p, message: e.target.value })); setErrors((prev) => ({ ...prev, message: undefined })); }} required />
         <p className="error-text">{errors.message ?? ""}</p>
       </div>
       {status ? <p className={`mt-4 ${status.kind === "ok" ? "status-ok" : "status-bad"}`}>{status.text}</p> : null}

@@ -57,7 +57,7 @@ export function PublicChatPanel({
     <section
       id="public-chat-panel"
       aria-label="DJ Press AI assistant"
-      className="glass-panel chat-panel-shell relative w-full p-2.5 pt-3 md:w-[23.5rem] md:p-3"
+      className="glass-panel chat-panel-shell relative w-full p-4 md:w-[23.5rem] md:p-5"
     >
       <button
         type="button"
@@ -96,7 +96,7 @@ export function PublicChatPanel({
         </div>
       ) : null}
 
-      <div className="mt-2 min-h-0 flex-1 overflow-hidden">
+      <div className="mt-3 min-h-0 flex-1 overflow-hidden">
         <PublicChatMessageList messages={messages} sending={sending} onPromptSelect={onPromptSelect} />
       </div>
 
@@ -111,7 +111,7 @@ export function PublicChatPanel({
         </div>
       ) : null}
 
-      <div className="mt-2 shrink-0 sticky bottom-0 z-40 bg-slate-950/90 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))]">
+      <div className="chat-composer-shell mt-3 shrink-0 border-t border-white/10 bg-[#060c18] pb-[max(0.65rem,env(safe-area-inset-bottom,0px))] pt-2">
         <PublicChatComposer
           value={pendingMessage}
           autoFocus

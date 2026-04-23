@@ -50,7 +50,7 @@ export function BookingInquiryStep({ form, update, inputClass, fieldError }: Boo
       </div>
       <div className="field md:col-span-2">
         <label className="field-label" htmlFor="specialNotes">Quick Notes (optional)</label>
-        <textarea id="specialNotes" rows={4} className={inputClass("specialNotes")} value={form.specialNotes || ""} onChange={(event) => update("specialNotes", event.target.value)} />
+        <textarea id="specialNotes" rows={4} autoComplete="off" className={inputClass("specialNotes")} value={form.specialNotes || ""} onChange={(event) => update("specialNotes", event.target.value)} />
         {fieldError("specialNotes")}
       </div>
     </div>

@@ -38,7 +38,7 @@ export function PublicChatMessageList({ messages, sending, onPromptSelect }: Pub
   }, [messages, sending]);
 
   return (
-    <div ref={containerRef} className="chat-scroll-area flex h-full min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1 pb-24">
+    <div ref={containerRef} className="chat-scroll-area flex h-full min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1 pb-[80px]">
       {messages.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-2.5">
           <p className="text-sm font-semibold text-white">Ask about packages, pricing, availability, or start your booking.</p>
