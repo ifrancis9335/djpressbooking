@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireAdminCsrf, requireAdminRequest } from "../../../../lib/admin-auth";
 import { listNotifications, markNotificationRead } from "../../../../lib/notifications/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const markReadBodySchema = z.object({
+  id: z.string().trim().min(1)
+});
 
 export async function GET(request: Request) {
   const authError = requireAdminRequest(request);
@@ -37,12 +42,16 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const body = (await request.json().catch(() => null)) as { id?: string } | null;
-    if (!body || typeof body !== "object" || !body.id?.trim()) {
-      return NextResponse.json({ message: "Notification id is required" }, { status: 400 });
+    const body = (await request.json().catch(() => null)) as unknown;
+    const parsedBody = markReadBodySchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { ok: false, message: "Invalid request.", errors: parsedBody.error.flatten() },
+        { status: 400 }
+      );
     }
 
-    const notification = await markNotificationRead(body.id.trim());
+    const notification = await markNotificationRead(parsedBody.data.id);
     return NextResponse.json({ notification, message: "Notification marked as read" });
   } catch (error) {
     return NextResponse.json(

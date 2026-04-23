@@ -2,20 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminActivity } from "../../../types/admin-activity";
+import { fetchAdminActivity } from "../../../lib/admin/activity-admin";
 
 interface AdminActivityFeedProps {
   enabled: boolean;
-}
-
-function parseResponse<T>(response: Response): Promise<T> {
-  return response.json().then((payload) => {
-    if (!response.ok) {
-      const message = payload && typeof payload === "object" && "message" in payload ? String(payload.message || "") : "";
-      throw new Error(message || "Request failed");
-    }
-
-    return payload as T;
-  });
 }
 
 function formatTimestamp(value: string) {
@@ -86,8 +76,7 @@ export function AdminActivityFeed({ enabled }: AdminActivityFeedProps) {
     setError(null);
 
     try {
-      const response = await fetch("/api/admin/activity?limit=12", { cache: "no-store" });
-      const payload = await parseResponse<{ activity: AdminActivity[] }>(response);
+      const payload = await fetchAdminActivity(12);
       setActivity(payload.activity || []);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load recent activity");

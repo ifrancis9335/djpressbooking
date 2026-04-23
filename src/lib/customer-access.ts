@@ -3,6 +3,7 @@ import { Booking } from "../types/booking";
 import { getLatestBookingMessage, buildBookingReplyToken } from "./booking-threads";
 import { getBookingById, listBookingsByCustomerEmail } from "./bookings";
 import { toPublicAbsoluteUrl } from "./public-url";
+import { getCustomerAccessTokenSecret } from "./security/secret-resolver";
 
 const HISTORY_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 14;
 
@@ -13,7 +14,7 @@ interface HistoryTokenPayload {
 }
 
 function getAccessSecret() {
-  return process.env.ADMIN_API_KEY || process.env.ADMIN_PASSWORD || "";
+  return getCustomerAccessTokenSecret();
 }
 
 function toBase64Url(value: string) {

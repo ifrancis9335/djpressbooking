@@ -5,6 +5,14 @@ export const ADMIN_SESSION_COOKIE = "dj_admin_session";
 export const ADMIN_CSRF_COOKIE = "dj_admin_csrf";
 const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 12;
 
+interface AdminSessionPayload {
+  v: number;
+  role: "admin";
+  iat: number;
+  exp: number;
+  nonce: string;
+}
+
 function getAdminSecret() {
   return process.env.ADMIN_API_KEY || process.env.ADMIN_PASSWORD || "";
 }
@@ -53,7 +61,7 @@ export function isAdminConfigured() {
 export function validateAdminPassword(input: string) {
   const expected = getAdminSecret();
   if (!expected) return false;
-  return input === expected;
+  return timingSafeEqualStrings(input, expected);
 }
 
 export function buildAdminSessionValue() {
@@ -61,13 +69,14 @@ export function buildAdminSessionValue() {
   if (!secret) return "";
 
   const now = Math.floor(Date.now() / 1000);
-  const payload = JSON.stringify({
+  const payload: AdminSessionPayload = {
     v: 1,
+    role: "admin",
     iat: now,
     exp: now + ADMIN_SESSION_TTL_SECONDS,
     nonce: crypto.randomUUID()
-  });
-  const payloadBase64 = toBase64Url(payload);
+  };
+  const payloadBase64 = toBase64Url(JSON.stringify(payload));
   const signature = signPayload(payloadBase64, secret);
   return `${payloadBase64}.${signature}`;
 }
@@ -90,9 +99,10 @@ export function isValidAdminSessionValue(value: string | undefined) {
   }
 
   try {
-    const payload = JSON.parse(fromBase64Url(payloadBase64)) as { exp?: number };
+    const payload = JSON.parse(fromBase64Url(payloadBase64)) as Partial<AdminSessionPayload>;
     const now = Math.floor(Date.now() / 1000);
     if (typeof payload.exp !== "number") return false;
+    if (payload.role !== "admin") return false;
     return payload.exp > now;
   } catch {
     return false;
@@ -100,16 +110,6 @@ export function isValidAdminSessionValue(value: string | undefined) {
 }
 
 export function isAuthorizedAdminRequest(request: Request) {
-  const secret = getAdminSecret();
-  if (!secret) {
-    return false;
-  }
-
-  const providedHeader = request.headers.get("x-admin-key") || "";
-  if (providedHeader === secret) {
-    return true;
-  }
-
   const cookies = parseCookieHeader(request);
   return isValidAdminSessionValue(cookies.get(ADMIN_SESSION_COOKIE));
 }

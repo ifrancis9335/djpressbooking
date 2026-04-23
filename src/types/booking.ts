@@ -32,6 +32,13 @@ export interface Booking {
   preferredContactMethod: "email" | "phone" | "text";
   specialNotes: string;
   status: BookingStatus;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  purgeAt?: string | null;
+  deletionReason?: string | null;
+  isTestBooking?: boolean;
+  source?: "public" | "admin" | "internal" | "test";
 }
 
 export interface BookingRequest {

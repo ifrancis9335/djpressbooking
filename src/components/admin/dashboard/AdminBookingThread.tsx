@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Booking } from "../../../types/booking";
 import { BookingMessage } from "../../../types/booking-thread";
-import { readCookieValue } from "../../../utils/csrf";
+import { createAdminBookingMessage, fetchAdminBookingMessages } from "../../../lib/admin/communications-admin";
 
 interface AdminBookingThreadProps {
   booking: Booking;
@@ -22,15 +22,6 @@ function formatTimestamp(value: string) {
   }).format(date);
 }
 
-async function parseResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
-  if (!response.ok) {
-    const message = payload && typeof payload === "object" && "message" in payload ? payload.message : undefined;
-    throw new Error(message || "Request failed");
-  }
-  return payload as T;
-}
-
 export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingThreadProps) {
   const [messages, setMessages] = useState<BookingMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -39,7 +30,7 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const threadContainerRef = useRef<HTMLDivElement | null>(null);
 
   const fetchMessages = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -50,8 +41,7 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
     }
 
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/messages`, { cache: "no-store" });
-      const payload = await parseResponse<{ messages: BookingMessage[] }>(response);
+      const payload = await fetchAdminBookingMessages(booking.id);
       setMessages(payload.messages || []);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load thread messages");
@@ -90,11 +80,15 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
   }, [fetchMessages]);
 
   useEffect(() => {
-    if (!bottomRef.current) {
+    const container = threadContainerRef.current;
+    if (!container) {
       return;
     }
 
-    bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom <= 64) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages.length]);
 
   const sendMessage = async (visibility: "customer" | "internal") => {
@@ -103,16 +97,7 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": readCookieValue("dj_admin_csrf")
-        },
-        body: JSON.stringify({ body: draft, visibility })
-      });
-
-      const payload = await parseResponse<{ threadMessage: BookingMessage; message: string }>(response);
+      const payload = await createAdminBookingMessage(booking.id, { body: draft, visibility });
       setMessages((current) => [...current, payload.threadMessage]);
       setDraft("");
       setSuccess(payload.message);
@@ -130,7 +115,7 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
         <div>
           <p className="text-sm font-semibold text-white">Conversation Thread</p>
           <p className="text-xs text-slate-400">Reply directly to this booking without leaving the admin dashboard.</p>
-          <p className="mt-1 text-xs text-slate-400">Customer can reopen this booking from Booking History or secure email link.</p>
+          <p className="mt-1 text-xs text-slate-400">Customer can reopen this booking from the secure booking portal or the email access link.</p>
           <p className="mt-1 text-xs text-slate-500">
             {latestMessage ? `Latest: ${latestMessage.body.slice(0, 72)}${latestMessage.body.length > 72 ? "..." : ""}` : "No messages yet."}
           </p>
@@ -142,7 +127,7 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
       </div>
 
       <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-black/20">
-        <div className="max-h-[360px] min-h-[240px] overflow-y-auto p-3">
+        <div ref={threadContainerRef} className="max-h-[360px] min-h-[240px] overflow-y-auto p-3">
           {loading ? <p className="text-sm text-slate-300">Loading thread...</p> : null}
           {!loading && messages.length === 0 ? <p className="text-sm text-slate-400">No messages yet.</p> : null}
           <div className="grid gap-2">
@@ -173,7 +158,6 @@ export function AdminBookingThread({ booking, refreshToken = 0 }: AdminBookingTh
                 </article>
               );
             })}
-            <div ref={bottomRef} />
           </div>
         </div>
 

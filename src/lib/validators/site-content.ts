@@ -80,10 +80,30 @@ export const packageItemSchema = z.object({
   id: textRequired(2, 120),
   name: textRequired(2, 180),
   price: textRequired(1, 80),
+  description: textRequired(2, 360),
   features: z.array(textRequired(1, 180)).default([]),
   highlight: z.boolean().optional(),
+  visible: z.boolean(),
   imageAsset: managedImageAssetSchema.nullable().optional(),
   order: z.number().int().min(0)
+});
+
+export const sharedContentPatchSchema = z.object({
+  homepageHero: z.object({
+    title: textRequired(2, 180),
+    description: textRequired(2, 420),
+    primaryCtaLabel: textRequired(2, 80),
+    secondaryCtaLabel: textRequired(2, 80)
+  }),
+  contact: z.object({
+    phone: textRequired(5, 40),
+    email: z.string().trim().email(),
+    serviceArea: textRequired(2, 180)
+  }),
+  site: z.object({
+    primaryCtaLabel: textRequired(2, 80),
+    serviceAreaLine: textRequired(2, 180)
+  })
 });
 
 export const galleryItemSchema = z.object({

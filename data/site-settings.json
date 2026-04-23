@@ -105,7 +105,23 @@
     },
     "services": [],
     "packages": [],
-    "gallery": [],
+    "gallery": [
+      {
+        "id": "gallery-1776875406769-jbeqle",
+        "url": "https://firebasestorage.googleapis.com/v0/b/djpressbooking.firebasestorage.app/o/uploads/gallery/1776875441457-7b597517d5d1.png?alt=media&token=fae7e220-2d4f-4cb7-82f2-a722e6045a93",
+        "type": "image",
+        "title": "Gallery Item 1",
+        "alt": "Gallery Item 1",
+        "imageAsset": {
+          "url": "https://firebasestorage.googleapis.com/v0/b/djpressbooking.firebasestorage.app/o/uploads/gallery/1776875441457-7b597517d5d1.png?alt=media&token=fae7e220-2d4f-4cb7-82f2-a722e6045a93",
+          "title": "Gallery Item 1",
+          "type": "image",
+          "mimeType": "image/png",
+          "size": 1091442
+        },
+        "order": 0
+      }
+    ],
     "reviews": [],
     "aboutStats": [],
     "bookingSettings": {

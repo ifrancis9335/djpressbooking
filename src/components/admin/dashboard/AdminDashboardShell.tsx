@@ -14,11 +14,11 @@ interface AdminDashboardShellProps {
 export function AdminDashboardShell({ summary, quickLinks, onLogout, children, loading, notificationBell }: AdminDashboardShellProps) {
   return (
     <div className="mt-6 grid gap-5">
-      <section className="glass-panel p-5 md:p-6">
+      <section id="dashboard-home" className="glass-panel p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-white">Dashboard Home</h2>
-            <p className="mt-1 text-sm text-slate-300">Manage key settings and live public values.</p>
+            <h2 className="text-2xl font-bold text-white">Admin Workspace Overview</h2>
+            <p className="mt-1 text-sm text-slate-300">Internal operations view for bookings, trash, content, blocked dates, and audit activity.</p>
           </div>
           <div className="flex items-center gap-3">
             {notificationBell}

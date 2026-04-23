@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { logAdminActivity } from "../../../../../../lib/admin-activity";
 import { requireAdminCsrf, requireAdminRequest } from "../../../../../../lib/admin-auth";
 import { getBookingById } from "../../../../../../lib/bookings";
@@ -10,13 +11,23 @@ export const dynamic = "force-dynamic";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
+const directEmailParamsSchema = z.object({
+  bookingId: z.string().trim().min(1)
+});
+
+const directEmailBodySchema = z.object({
+  to: z.string().trim().email(),
+  subject: z.string().trim().min(1).max(200),
+  message: z.string().trim().min(1).max(10000)
+});
+
 function ok(message: string, id?: string) {
   return NextResponse.json({ ok: true, message, ...(id ? { id } : {}) });
 }
 
-function fail(message: string, status: number, details?: unknown) {
+function fail(message: string, status: number) {
   return NextResponse.json(
-    { ok: false, message, ...(details !== undefined ? { details } : {}) },
+    { ok: false, message },
     { status }
   );
 }
@@ -49,8 +60,16 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ bookingId: string }> }
 ) {
-  const { bookingId: rawBookingId } = await context.params;
-  const bookingId = (rawBookingId ?? "").trim();
+  const rawParams = await context.params;
+  const parsedParams = directEmailParamsSchema.safeParse(rawParams);
+  if (!parsedParams.success) {
+    return NextResponse.json(
+      { ok: false, message: "Invalid request.", errors: parsedParams.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const bookingId = parsedParams.data.bookingId;
 
   const apiKey = process.env.RESEND_API_KEY?.trim() ?? "";
   const from = process.env.BOOKING_NOTIFICATION_EMAIL_FROM?.trim() ?? "";
@@ -89,7 +108,7 @@ export async function POST(
 
   if (!EMAIL_RE.test(replyTo)) {
     return fail(
-      `Server configuration error: BOOKING_NOTIFICATION_EMAIL_FROM contains an invalid email address ("${replyTo}").`,
+      `Server configuration error: BOOKING_REPLY_TO contains an invalid email address ("${replyTo}").`,
       500
     );
   }
@@ -103,37 +122,25 @@ export async function POST(
   const rawText = await request.text().catch(() => "");
 
   if (!rawText) {
-    return fail("Invalid JSON request body.", 400);
+    return NextResponse.json({ ok: false, message: "Invalid request." }, { status: 400 });
   }
 
-  let body: { to?: string; subject?: string; message?: string } | null = null;
+  let body: unknown = null;
   try {
-    body = JSON.parse(rawText) as { to?: string; subject?: string; message?: string };
+    body = JSON.parse(rawText) as unknown;
   } catch {
     debugLog("[direct-email] invalid_json_body", { bookingId });
-    return fail("Invalid JSON request body.", 400);
+    return NextResponse.json({ ok: false, message: "Invalid request." }, { status: 400 });
+  }
+  const parsedBody = directEmailBodySchema.safeParse(body);
+  if (!parsedBody.success) {
+    return NextResponse.json(
+      { ok: false, message: "Invalid request.", errors: parsedBody.error.flatten() },
+      { status: 400 }
+    );
   }
 
-  const to = body?.to?.trim() ?? "";
-  const subject = body?.subject?.trim() ?? "";
-  const message = body?.message?.trim() ?? "";
-
-  // ── Field validation ─────────────────────────────────────────────────────────
-  if (!to || !subject || !message) {
-    return fail("Fields 'to', 'subject', and 'message' are all required.", 400);
-  }
-
-  if (!EMAIL_RE.test(to)) {
-    return fail("Invalid recipient email address.", 400);
-  }
-
-  if (subject.length > 200) {
-    return fail("Subject must be 200 characters or fewer.", 400);
-  }
-
-  if (message.length > 10000) {
-    return fail("Message must be 10,000 characters or fewer.", 400);
-  }
+  const { to, subject, message } = parsedBody.data;
 
   // ── Build email content ──────────────────────────────────────────────────────
   const safeMessage = message
@@ -196,7 +203,7 @@ export async function POST(
         bookingId,
         ...serializeErrorDetails(result.error)
       });
-      return fail(`Resend send failed: ${result.error.message}`, 502, result.error);
+      return fail("Email provider send failed. Please try again shortly.", 502);
     }
 
     debugLog("[direct-email] resend_send_succeeded", {
@@ -224,7 +231,7 @@ export async function POST(
       bookingId,
       ...serializeErrorDetails(err)
     });
-    return fail(err instanceof Error ? err.message : "Unexpected email error.", 500);
+    return fail("Unexpected email error. Please try again shortly.", 500);
   }
 }
 

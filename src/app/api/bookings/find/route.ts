@@ -47,8 +47,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         message: "Access verified.",
-        redirectUrl: replyUrl,
-        historyUrl
+        redirectUrl: replyUrl
       });
     }
 
@@ -62,8 +61,7 @@ export async function POST(request: Request) {
     if (!emailResult.sent) {
       return NextResponse.json(
         {
-          message: "Unable to send booking access email right now. Try Open Chat with booking ID or try again shortly.",
-          reason: emailResult.reason
+          message: "Unable to send booking access email right now. Try Open Chat with booking ID or try again shortly."
         },
         { status: 503 }
       );

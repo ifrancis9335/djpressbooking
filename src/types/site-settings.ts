@@ -55,8 +55,8 @@ export interface PublicSiteData {
     id: string;
     name: string;
     startingAt: string;
-    bestFor: string;
-    duration: string;
+    bestFor?: string;
+    duration?: string;
     featured?: boolean;
     featureLabel?: string;
     summary: string;

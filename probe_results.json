@@ -1,0 +1,21 @@
+{
+  "window": {
+    "display": "block",
+    "position": "static",
+    "width": "1280px",
+    "height": "8px",
+    "margin": "0px",
+    "padding": "0px",
+    "background-color": "rgba(0, 0, 0, 0)",
+    "color": "rgb(0, 0, 0)",
+    "font-size": "16px",
+    "flex-direction": "row",
+    "justify-content": "normal",
+    "align-items": "normal",
+    "overflow": "visible"
+  },
+  ".public-shell-root": null,
+  ".public-shell-main": null,
+  ".public-shell-viewport": null,
+  ".public-shell-nav-btn": null
+}

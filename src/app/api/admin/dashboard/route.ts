@@ -3,7 +3,7 @@ import { requireAdminRequest } from "../../../../lib/admin-auth";
 import { listAdminActivity } from "../../../../lib/admin-activity";
 import { logAdminDebug, logAdminDebugError } from "../../../../lib/admin-debug";
 import { listBlockedDates } from "../../../../lib/availability-db";
-import { getBookings } from "../../../../lib/bookings";
+import { getBookings, purgeOldDeletedBookings } from "../../../../lib/bookings";
 import { getSiteSettings } from "../../../../lib/site-settings";
 
 export const runtime = "nodejs";
@@ -22,6 +22,15 @@ export async function GET(request: Request) {
     let bookingsAwaitingResponse = 0;
     let upcomingConfirmedBookings = 0;
     let recentActivityCount = 0;
+
+    try {
+      const purgedBookings = await purgeOldDeletedBookings();
+      if (purgedBookings.length > 0) {
+        logAdminDebug("admin_dashboard_purged_deleted_bookings", { count: purgedBookings.length });
+      }
+    } catch (error) {
+      logAdminDebugError("admin_dashboard_purge_deleted_bookings_error", error);
+    }
 
     try {
       blockedDates = await listBlockedDates();

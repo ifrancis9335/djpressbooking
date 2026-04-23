@@ -59,6 +59,6 @@ export async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export function warnAdminLoadFailure(section: "settings" | "content" | "dashboard" | "availability", error: unknown) {
-  console.warn(`[admin-dashboard] ${section} load failed`, error);
+  console.warn(`[admin-workspace] ${section} load failed`, error);
   console.warn("[ADMIN LOAD PARTIAL FAILURE]", error);
 }

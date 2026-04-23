@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireAdminCsrf, requireAdminRequest } from "../../../../../lib/admin-auth";
 import { resetBookingData } from "../../../../../lib/booking-reset";
 
@@ -7,11 +8,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const REQUIRED_CONFIRMATION = "RESET_BOOKING_DATA";
-
-interface ResetBookingDataBody {
-  confirm?: string;
-  resetBlockedDates?: boolean;
-}
+const resetBookingBodySchema = z.object({
+  confirm: z.string(),
+  resetBlockedDates: z.boolean().optional().default(false)
+});
 
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
@@ -26,27 +26,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: csrfError }, { status: 403 });
   }
 
-  const body = (await request.json().catch(() => null)) as ResetBookingDataBody | null;
+  const body = (await request.json().catch(() => null)) as unknown;
   if (!body || typeof body !== "object") {
-    return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 });
+    return NextResponse.json({ ok: false, message: "Invalid request." }, { status: 400 });
   }
 
-  if (body.confirm !== REQUIRED_CONFIRMATION) {
+  const parsedBody = resetBookingBodySchema.safeParse(body);
+  if (!parsedBody.success) {
     return NextResponse.json(
-      {
-        message: `Confirmation required. Send confirm=${REQUIRED_CONFIRMATION} to reset booking data.`
-      },
+      { ok: false, message: "Invalid request.", errors: parsedBody.error.flatten() },
       { status: 400 }
     );
   }
 
+  const parsed = parsedBody.data;
+
+  if (parsed.confirm !== REQUIRED_CONFIRMATION) {
+    return NextResponse.json({ ok: false, message: "Invalid request." }, { status: 400 });
+  }
+
   const summary = await resetBookingData({
-    resetBlockedDates: body.resetBlockedDates === true
+    resetBlockedDates: parsed.resetBlockedDates === true
   });
 
   console.info("[admin-bookings-reset] reset_success", {
     requestId,
-    resetBlockedDates: body.resetBlockedDates === true,
+    resetBlockedDates: parsed.resetBlockedDates === true,
     ...summary
   });
 
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
   revalidatePath("/booking-history");
 
   return NextResponse.json({
-    message: body.resetBlockedDates === true ? "Booking data and blocked dates reset." : "Booking data reset.",
+    message: parsed.resetBlockedDates === true ? "Booking data and blocked dates reset." : "Booking data reset.",
     summary
   });
 }

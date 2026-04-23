@@ -1,0 +1,19 @@
+{
+  "window": {
+    "display": "block",
+    "position": "static",
+    "width": "1280px",
+    "height": "8px",
+    "margin": "0px",
+    "padding": "0px",
+    "background-color": "rgba(0, 0, 0, 0)",
+    "color": "rgb(0, 0, 0)",
+    "font-size": "16px",
+    "flex-direction": "row",
+    "justify-content": "normal",
+    "align-items": "normal",
+    "overflow": "visible"
+  },
+  "allClasses": [],
+  "html": "<div id=\"__next\"></div><script src=\"/_next/static/chunks/fallback/react-refresh.js\"></script><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"statusCode\":500,\"hostname\":\"localhost\"}},\"page\":\"/_error\",\"query\":{},\"buildId\":\"development\",\"isFallback\":false,\"err\":{\"name\":\"Error\",\"source\":\"server\",\"message\":\"Syntax error: C:\\\\Users\\\\djpress\\\\Documents\\\\djpressbooking.com\\\\src\\\\app\\\\globals.css The `hover:bg-luxeBlue/12` class does not exist. If `hover:bg-luxeBlue/12` is a cu"
+}

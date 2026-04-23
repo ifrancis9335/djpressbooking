@@ -1,25 +1,7 @@
 import { NextResponse } from "next/server";
-import { ADMIN_CSRF_COOKIE, ADMIN_SESSION_COOKIE } from "../../../../../lib/admin-auth";
+
+export const runtime = "nodejs";
 
 export async function POST() {
-  const response = NextResponse.json({ message: "Signed out" });
-  response.cookies.set({
-    name: ADMIN_SESSION_COOKIE,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0
-  });
-  response.cookies.set({
-    name: ADMIN_CSRF_COOKIE,
-    value: "",
-    httpOnly: false,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0
-  });
-  return response;
+	return NextResponse.json({ message: "Not found" }, { status: 404 });
 }

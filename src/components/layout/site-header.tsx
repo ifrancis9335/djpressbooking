@@ -101,7 +101,7 @@ export function SiteHeader({ branding, phone, phoneHref, primaryCtaLabel, second
         aria-modal="true"
         aria-label="Mobile main navigation"
       >
-        <div className="flex min-h-[100dvh] flex-col overflow-y-auto">
+        <div className="flex h-[100dvh] flex-col overflow-y-auto">
           <div className="container-width flex w-full flex-1 flex-col pb-8 pt-6">
             <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5 pt-1">
               <div className="flex min-w-0 items-center gap-3 pr-3">

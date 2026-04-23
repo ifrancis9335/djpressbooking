@@ -7,6 +7,9 @@ import { buildBookingNotificationWritePayload } from "./notifications/store";
 
 const BOOKINGS_COLLECTION = "bookings";
 const BLOCKED_DATES_COLLECTION = "blocked_dates";
+const NOTIFICATIONS_COLLECTION = "notifications";
+const BOOKING_MESSAGES_SUBCOLLECTION = "messages";
+const TRASH_RETENTION_DAYS = 30;
 
 export class BookingConflictError extends Error {
   constructor(message: string) {
@@ -28,14 +31,111 @@ function isPastDate(date: string) {
   return date < localTodayIso();
 }
 
-function toIsoString(value: Booking["createdAt"] | { toDate?: () => Date } | undefined) {
+function toIsoString(value: Booking["createdAt"] | { toDate?: () => Date } | undefined | null) {
   if (!value) return new Date().toISOString();
   if (typeof value === "string") return value;
   if (typeof value === "object" && value.toDate) return value.toDate().toISOString();
   return new Date().toISOString();
 }
 
+function toRetentionIso(daysFromNow: number) {
+  const value = new Date();
+  value.setDate(value.getDate() + daysFromNow);
+  return value.toISOString();
+}
+
+function shouldPurgeDeletedBooking(booking: Booking, nowMs: number) {
+  if (!booking.isDeleted) {
+    return false;
+  }
+
+  if (booking.purgeAt) {
+    const purgeAtMs = new Date(booking.purgeAt).getTime();
+    if (!Number.isNaN(purgeAtMs)) {
+      return purgeAtMs <= nowMs;
+    }
+  }
+
+  if (!booking.deletedAt) {
+    return false;
+  }
+
+  const deletedAtMs = new Date(booking.deletedAt).getTime();
+  if (Number.isNaN(deletedAtMs)) {
+    return false;
+  }
+
+  return deletedAtMs + TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000 <= nowMs;
+}
+
+function normalizeSource(input: unknown, isTestBooking: boolean): Booking["source"] {
+  if (input === "public" || input === "admin" || input === "internal" || input === "test") {
+    return input;
+  }
+  return isTestBooking ? "test" : "public";
+}
+
+function inferIsTestBooking(data: Partial<Booking>) {
+  const values = [
+    data.fullName,
+    data.email,
+    data.phone,
+    data.specialNotes,
+    data.venueName,
+    data.packageId,
+    data.city
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .toLowerCase();
+
+  if (!values) {
+    return false;
+  }
+
+  return /(\btest\b|\bdemo\b|\binternal\b|\bqa\b|\be2e\b|\bplaywright\b|example\.com|mailinator|fake|sample)/i.test(values);
+}
+
+async function deleteCollectionDocs(path: string) {
+  const db = getServerFirestore();
+  const snapshot = await db.collection(path).get();
+  if (snapshot.empty) {
+    return 0;
+  }
+
+  let deletedCount = 0;
+  for (let index = 0; index < snapshot.docs.length; index += 400) {
+    const batch = db.batch();
+    const slice = snapshot.docs.slice(index, index + 400);
+    slice.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    deletedCount += slice.length;
+  }
+
+  return deletedCount;
+}
+
+async function deleteQueryDocs(query: FirebaseFirestore.Query) {
+  const snapshot = await query.get();
+  if (snapshot.empty) {
+    return 0;
+  }
+
+  const db = getServerFirestore();
+  let deletedCount = 0;
+  for (let index = 0; index < snapshot.docs.length; index += 400) {
+    const batch = db.batch();
+    const slice = snapshot.docs.slice(index, index + 400);
+    slice.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    deletedCount += slice.length;
+  }
+
+  return deletedCount;
+}
+
 function toBooking(id: string, data: Partial<Booking>): Booking {
+  const isTestBooking = typeof data.isTestBooking === "boolean" ? data.isTestBooking : inferIsTestBooking(data);
   return {
     id,
     createdAt: toIsoString(data.createdAt),
@@ -61,7 +161,14 @@ function toBooking(id: string, data: Partial<Booking>): Booking {
     budgetRange: data.budgetRange ?? "",
     preferredContactMethod: data.preferredContactMethod ?? "email",
     specialNotes: data.specialNotes ?? "",
-    status: data.status ?? "new"
+    status: data.status ?? "new",
+    isDeleted: Boolean(data.isDeleted),
+    deletedAt: data.deletedAt ? toIsoString(data.deletedAt as string | { toDate?: () => Date }) : null,
+    deletedBy: data.deletedBy ?? null,
+    purgeAt: data.purgeAt ? toIsoString(data.purgeAt as string | { toDate?: () => Date }) : null,
+    deletionReason: data.deletionReason ?? null,
+    isTestBooking,
+    source: normalizeSource(data.source, isTestBooking)
   };
 }
 
@@ -98,6 +205,16 @@ export async function createBooking(payload: BookingRequest): Promise<Booking> {
       }
 
       const nowIso = new Date().toISOString();
+      const isTestBooking = inferIsTestBooking({
+        ...payload,
+        email: payload.email,
+        specialNotes: payload.specialNotes,
+        fullName: payload.fullName,
+        phone: payload.phone,
+        venueName: payload.venueName,
+        packageId: payload.packageId,
+        city: payload.city
+      });
       const booking: Booking = {
         id: bookingDocRef.id,
         createdAt: nowIso,
@@ -123,7 +240,14 @@ export async function createBooking(payload: BookingRequest): Promise<Booking> {
         mcService: payload.mcService ?? "no",
         lights: payload.lights ?? "no",
         budgetRange: payload.budgetRange ?? "",
-        preferredContactMethod: payload.preferredContactMethod
+        preferredContactMethod: payload.preferredContactMethod,
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        purgeAt: null,
+        deletionReason: null,
+        isTestBooking,
+        source: isTestBooking ? "test" : "public"
       };
 
       const bookingWritePayloadBeforeClean = {
@@ -161,23 +285,30 @@ export async function createBooking(payload: BookingRequest): Promise<Booking> {
   }
 }
 
-export async function getBookings(): Promise<Booking[]> {
+export async function getBookings(options?: { includeDeleted?: boolean }): Promise<Booking[]> {
+  const includeDeleted = options?.includeDeleted ?? false;
   const db = getServerFirestore();
   const snapshot = await db.collection(BOOKINGS_COLLECTION).orderBy("createdAt", "desc").get();
-  return snapshot.docs.map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>));
+  const bookings = snapshot.docs.map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>));
+  if (includeDeleted) {
+    return bookings;
+  }
+  return bookings.filter((booking) => !booking.isDeleted);
 }
 
-export async function getBookingByDate(date: string): Promise<Booking | null> {
+export async function getBookingByDate(date: string, options?: { includeDeleted?: boolean }): Promise<Booking | null> {
+  const includeDeleted = options?.includeDeleted ?? false;
   const db = getServerFirestore();
   const snapshot = await db
     .collection(BOOKINGS_COLLECTION)
     .where("eventDate", "==", date)
-    .limit(1)
+    .limit(10)
     .get();
 
   if (snapshot.empty) return null;
-  const doc = snapshot.docs[0];
-  return toBooking(doc.id, doc.data() as Partial<Booking>);
+  const bookings = snapshot.docs.map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>));
+  const target = includeDeleted ? bookings[0] : bookings.find((booking) => !booking.isDeleted);
+  return target ?? null;
 }
 
 export async function getBookingById(id: string): Promise<Booking | null> {
@@ -215,6 +346,140 @@ export async function updateBookingStatus(id: string, status: BookingStatus): Pr
   return updated;
 }
 
+export async function softDeleteBooking(id: string, deletedBy: string, options?: { deletionReason?: string | null }): Promise<Booking> {
+  const db = getServerFirestore();
+  const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(id);
+  const deletionReason = options?.deletionReason?.trim() || null;
+  const purgeAt = toRetentionIso(TRASH_RETENTION_DAYS);
+
+  return db.runTransaction(async (transaction) => {
+    const bookingSnap = await transaction.get(bookingRef);
+    if (!bookingSnap.exists) {
+      throw new Error("Booking not found.");
+    }
+
+    const current = toBooking(bookingSnap.id, bookingSnap.data() as Partial<Booking>);
+    if (current.isDeleted) {
+      return current;
+    }
+
+    transaction.update(bookingRef, {
+      isDeleted: true,
+      deletedAt: FieldValue.serverTimestamp(),
+      deletedBy,
+      purgeAt,
+      deletionReason,
+      updatedAt: FieldValue.serverTimestamp()
+    });
+
+    return {
+      ...current,
+      isDeleted: true,
+      deletedAt: new Date().toISOString(),
+      deletedBy,
+      purgeAt,
+      deletionReason
+    };
+  });
+}
+
+export async function restoreBooking(id: string): Promise<Booking> {
+  const db = getServerFirestore();
+  const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(id);
+
+  return db.runTransaction(async (transaction) => {
+    const bookingSnap = await transaction.get(bookingRef);
+    if (!bookingSnap.exists) {
+      throw new Error("Booking not found.");
+    }
+
+    const current = toBooking(bookingSnap.id, bookingSnap.data() as Partial<Booking>);
+    if (!current.isDeleted) {
+      return current;
+    }
+
+    transaction.update(bookingRef, {
+      isDeleted: false,
+      deletedAt: null,
+      deletedBy: null,
+      purgeAt: null,
+      deletionReason: null,
+      updatedAt: FieldValue.serverTimestamp()
+    });
+
+    return {
+      ...current,
+      isDeleted: false,
+      deletedAt: null,
+      deletedBy: null,
+      purgeAt: null,
+      deletionReason: null
+    };
+  });
+}
+
+export async function permanentlyDeleteBooking(id: string): Promise<Booking | null> {
+  const db = getServerFirestore();
+  const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(id);
+  const snapshot = await bookingRef.get();
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const booking = toBooking(snapshot.id, snapshot.data() as Partial<Booking>);
+
+  await deleteCollectionDocs(`${BOOKINGS_COLLECTION}/${id}/${BOOKING_MESSAGES_SUBCOLLECTION}`);
+  await deleteQueryDocs(db.collection(NOTIFICATIONS_COLLECTION).where("bookingId", "==", id));
+  await bookingRef.delete();
+
+  return booking;
+}
+
+export async function purgeExpiredBookings(): Promise<Booking[]> {
+  const db = getServerFirestore();
+  const snapshot = await db.collection(BOOKINGS_COLLECTION).where("isDeleted", "==", true).get();
+  const nowMs = Date.now();
+  const expired = snapshot.docs
+    .map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>))
+    .filter((booking) => shouldPurgeDeletedBooking(booking, nowMs));
+
+  const purged: Booking[] = [];
+  for (const booking of expired) {
+    const deleted = await permanentlyDeleteBooking(booking.id);
+    if (deleted) {
+      purged.push(deleted);
+    }
+  }
+
+  return purged;
+}
+
+export async function purgeOldDeletedBookings(): Promise<Booking[]> {
+  return purgeExpiredBookings();
+}
+
+export async function purgeExpiredDeletedBookings(): Promise<Booking[]> {
+  return purgeExpiredBookings();
+}
+
+export async function purgeDeletedTestBookings(): Promise<Booking[]> {
+  const db = getServerFirestore();
+  const snapshot = await db.collection(BOOKINGS_COLLECTION).where("isDeleted", "==", true).get();
+  const testBookings = snapshot.docs
+    .map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>))
+    .filter((booking) => booking.isTestBooking);
+
+  const purged: Booking[] = [];
+  for (const booking of testBookings) {
+    const deleted = await permanentlyDeleteBooking(booking.id);
+    if (deleted) {
+      purged.push(deleted);
+    }
+  }
+
+  return purged;
+}
+
 export async function getAvailabilityForMonth(monthIso: string): Promise<AvailabilityRecord[]> {
   const [yearRaw, monthRaw] = monthIso.split("-");
   const year = Number(yearRaw);
@@ -233,6 +498,7 @@ export async function getAvailabilityForMonth(monthIso: string): Promise<Availab
 
   return snapshot.docs
     .map((doc) => ({ id: doc.id, ...(doc.data() as Partial<Booking>) }))
+    .filter((booking) => !booking.isDeleted)
     .filter((booking) => typeof booking.eventDate === "string" && booking.eventDate >= start && booking.eventDate <= end)
     .sort((left, right) => String(left.eventDate).localeCompare(String(right.eventDate)))
     .map((booking) => toAvailabilityRecord(String(booking.eventDate), {
@@ -256,7 +522,11 @@ export async function getConfirmedBookingByDate(date: string): Promise<Booking |
   }
 
   const confirmedDoc = snapshot.docs[0];
-  return toBooking(confirmedDoc.id, confirmedDoc.data() as Partial<Booking>);
+  const booking = toBooking(confirmedDoc.id, confirmedDoc.data() as Partial<Booking>);
+  if (booking.isDeleted) {
+    return null;
+  }
+  return booking;
 }
 
 export async function listBookingsByCustomerEmail(email: string): Promise<Booking[]> {
@@ -271,6 +541,7 @@ export async function listBookingsByCustomerEmail(email: string): Promise<Bookin
   if (!exactSnapshot.empty) {
     return exactSnapshot.docs
       .map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>))
+      .filter((booking) => !booking.isDeleted)
       .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
   }
 
@@ -278,6 +549,7 @@ export async function listBookingsByCustomerEmail(email: string): Promise<Bookin
   const allSnapshot = await db.collection(BOOKINGS_COLLECTION).get();
   return allSnapshot.docs
     .map((doc) => toBooking(doc.id, doc.data() as Partial<Booking>))
+    .filter((booking) => !booking.isDeleted)
     .filter((booking) => booking.email.trim().toLowerCase() === normalized)
     .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
 }

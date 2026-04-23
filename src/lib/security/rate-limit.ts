@@ -17,7 +17,7 @@ function now() {
   return Date.now();
 }
 
-function getClientIp(request: Request) {
+export function getClientIp(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for") || "";
   const first = forwarded.split(",")[0]?.trim();
   if (first) return first;

@@ -14,8 +14,8 @@ interface PackageDisplayItem {
   id: string;
   name: string;
   startingAt: string;
-  bestFor: string;
-  duration: string;
+  bestFor?: string;
+  duration?: string;
   summary: string;
   includes: string[];
   featured?: boolean;
@@ -77,16 +77,19 @@ export function getPackageItems(content: SiteContent): PackageDisplayItem[] {
     return fallbackPackageTiers;
   }
 
-  return [...content.packages]
+  const visiblePackages = [...content.packages]
     .sort((a, b) => a.order - b.order)
+    .filter((item) => item.visible);
+
+  return visiblePackages
     .map((item) => ({
       id: item.id,
       name: item.name,
       startingAt: item.price,
-      bestFor: item.features[0] || "Signature events",
-      duration: "Custom timeline",
-      summary: item.features.length > 0 ? item.features.join(" • ") : "Custom package details available on request.",
-      includes: item.features,
+      bestFor: item.features[0] || undefined,
+      duration: undefined,
+      summary: item.description || item.features.join(" • ") || "Custom package details available on request.",
+      includes: item.features.length > 0 ? item.features : ["Custom package details available on request."],
       featured: item.highlight,
       featureLabel: item.highlight ? "Featured" : undefined,
       ctaLabel: `Book ${item.name}`,
@@ -96,6 +99,8 @@ export function getPackageItems(content: SiteContent): PackageDisplayItem[] {
 }
 
 export function getGalleryItems(content: SiteContent): GalleryDisplayItem[] {
+  const galleryPlaceholderUrl = "/images/branding/dj-press-logo-press.png";
+
   if (content.gallery.length === 0) {
     return fallbackGalleryItems.map((item) => ({
       id: item.id,
@@ -109,20 +114,27 @@ export function getGalleryItems(content: SiteContent): GalleryDisplayItem[] {
     }));
   }
 
-  return [...content.gallery]
+  const savedItems = [...content.gallery]
     .sort((a, b) => a.order - b.order)
+    .filter((item) => item.type === "video" || item.url !== galleryPlaceholderUrl || Boolean(item.imageAsset?.url));
+
+  if (savedItems.length === 0) {
+    return [];
+  }
+
+  return savedItems
     .map((item, index) => ({
       id: item.id,
       title: item.title || item.caption || `${item.type === "video" ? "Video" : "Image"} ${index + 1}`,
       category: item.type === "video" ? "Video" : "Gallery",
       caption: item.caption || "",
       image: item.type === "image"
-        ? getManagedImageUrl(item.imageAsset, item.url, "/images/branding/dj-press-logo-press.png")
-        : "/images/branding/dj-press-logo-press.png",
+        ? getManagedImageUrl(item.imageAsset, item.url, galleryPlaceholderUrl)
+        : galleryPlaceholderUrl,
       alt: item.alt || item.title || item.caption || `${item.type} content item`,
       type: item.type,
       url: item.type === "image"
-        ? getManagedImageUrl(item.imageAsset, item.url, "/images/branding/dj-press-logo-press.png")
+        ? getManagedImageUrl(item.imageAsset, item.url, galleryPlaceholderUrl)
         : item.url
     }));
 }

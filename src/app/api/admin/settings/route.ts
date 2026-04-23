@@ -38,14 +38,14 @@ export async function PATCH(request: Request) {
   try {
     const body = (await request.json().catch(() => null)) as Partial<SiteSettings> | null;
     if (!body || typeof body !== "object") {
-      return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 });
+      return NextResponse.json({ ok: false, message: "Invalid request." }, { status: 400 });
     }
     logAdminDebug("admin_settings_patch_received", { keys: Object.keys(body || {}) });
     const parsed = siteSettingsPatchSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { message: "Invalid settings payload", errors: parsed.error.flatten() },
+        { ok: false, message: "Invalid request.", errors: parsed.error.flatten() },
         { status: 400 }
       );
     }

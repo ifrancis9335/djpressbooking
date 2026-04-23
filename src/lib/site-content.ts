@@ -244,7 +244,7 @@ function normalizeServices(input: unknown): ServiceContentItem[] {
     });
   });
 
-  return normalized.sort((a, b) => a.order - b.order).map((item, index) => ({ ...item, order: index }));
+  return normalized.map((item, index) => ({ ...item, order: index }));
 }
 
 function normalizePackages(input: unknown): PackageContentItem[] {
@@ -262,7 +262,8 @@ function normalizePackages(input: unknown): PackageContentItem[] {
     const row = item as Partial<PackageContentItem>;
     const name = sanitizeString(row.name);
     const price = sanitizeString(row.price);
-    if (!name || !price) {
+    const description = sanitizeString(row.description);
+    if (!name || !price || !description) {
       return;
     }
 
@@ -274,8 +275,10 @@ function normalizePackages(input: unknown): PackageContentItem[] {
       id: sanitizeString(row.id, `package-${index + 1}`),
       name,
       price,
+      description,
       features,
       highlight: typeof row.highlight === "boolean" ? row.highlight : false,
+      visible: typeof row.visible === "boolean" ? row.visible : true,
       imageAsset: normalizeManagedImageAsset(row.imageAsset),
       order: sanitizeOrder(row.order, index)
     });
@@ -298,10 +301,12 @@ function normalizeGallery(input: unknown): GalleryContentItem[] {
 
     const row = item as Partial<GalleryContentItem>;
     const imageAsset = normalizeManagedImageAsset(row.imageAsset);
-    const url = sanitizeString(row.url) || imageAsset?.url || "";
+    const url = imageAsset?.url || sanitizeString(row.url) || "";
     if (!url) {
       return;
     }
+
+    const type = row.type === "video" ? "video" : "image";
 
     const title = sanitizeString(row.title) || sanitizeString(row.caption) || `Gallery Item ${index + 1}`;
     const caption = sanitizeString(row.caption) || undefined;
@@ -310,7 +315,7 @@ function normalizeGallery(input: unknown): GalleryContentItem[] {
     normalized.push({
       id: sanitizeString(row.id, `gallery-${index + 1}`),
       url,
-      type: row.type === "video" ? "video" : "image",
+      type,
       title,
       caption,
       alt,
@@ -319,7 +324,7 @@ function normalizeGallery(input: unknown): GalleryContentItem[] {
     });
   });
 
-  return normalized.sort((a, b) => a.order - b.order).map((item, index) => ({ ...item, order: index }));
+  return normalized.map((item, index) => ({ ...item, order: index }));
 }
 
 function normalizeReviews(input: unknown): ReviewContentItem[] {

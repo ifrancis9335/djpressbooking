@@ -75,8 +75,10 @@ export interface PackageContentItem {
   id: string;
   name: string;
   price: string;
+  description: string;
   features: string[];
   highlight?: boolean;
+  visible: boolean;
   imageAsset?: ManagedImageAsset | null;
   order: number;
 }

@@ -4,6 +4,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { logAdminDebug, logAdminDebugError } from "./admin-debug";
 import { packageTiers as defaultPackageTiers } from "../data/packages";
 import { siteContact as defaultSiteContact } from "../data/site";
+import { getPackageItems } from "./content-items";
 import { PublicSiteData, SiteSettings } from "../types/site-settings";
 import { DeepPartial, SiteContent } from "../types/site-content";
 import { defaultSiteContent, loadSiteContent, mergeSiteContentPatch } from "./site-content";
@@ -141,6 +142,7 @@ export async function patchSiteSettings(partial: Partial<SiteSettings>): Promise
 export async function getPublicSiteData(): Promise<PublicSiteData> {
   noStore();
   const settings = await getSiteSettings();
+  const siteContent = loadSiteContent(settings);
 
   const packageMap = new Map(
     defaultPackageTiers.map((tier) => {
@@ -157,6 +159,23 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
     })
   );
 
+  const managedPackageItems = getPackageItems(siteContent);
+  const packageTiers = siteContent.packages.length > 0
+    ? managedPackageItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        startingAt: item.startingAt,
+        bestFor: item.bestFor,
+        duration: item.duration,
+        featured: item.featured,
+        featureLabel: item.featureLabel,
+        summary: item.summary,
+        includes: item.includes,
+        highlights: item.highlights,
+        ctaLabel: item.ctaLabel
+      }))
+    : defaultPackageTiers.map((tier) => packageMap.get(tier.id) || tier);
+
   return {
     siteContact: {
       ...defaultSiteContact,
@@ -165,9 +184,10 @@ export async function getPublicSiteData(): Promise<PublicSiteData> {
       phoneHref: settings.contact.phoneHref,
       serviceArea: settings.contact.serviceArea
     },
-    packageTiers: defaultPackageTiers.map((tier) => packageMap.get(tier.id) || tier),
+    packageTiers,
     bookingSettings: settings.booking,
     siteSettings: settings.site,
-    siteContent: loadSiteContent(settings)
+    siteContent
   };
 }
+

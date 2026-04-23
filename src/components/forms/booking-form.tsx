@@ -14,6 +14,7 @@ import { BookingAvailabilityStep } from "./booking/BookingAvailabilityStep";
 import { BookingInquiryStep } from "./booking/BookingInquiryStep";
 import { BookingReviewStep } from "./booking/BookingReviewStep";
 import { BookingSummarySidebar } from "./booking/BookingSummarySidebar";
+import { CHAT_BOOKING_PREFILL_STORAGE_KEY } from "../../utils/chat-api";
 
 interface BookingFormProps {
   initialPublicData: PublicSiteData;
@@ -36,42 +37,66 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
   const packageTiers = publicData?.packageTiers ?? initialPublicData.packageTiers;
   const allowedPackageIds = useMemo(() => new Set(packageTiers.map((tier) => tier.id.toLowerCase())), [packageTiers]);
 
-  const isDev = process.env.NODE_ENV !== "production";
-  const debugInfo = useCallback((...args: unknown[]) => {
-    if (isDev) {
-      console.info(...args);
-    }
-  }, [isDev]);
-  const debugError = useCallback((...args: unknown[]) => {
-    if (isDev) {
-      console.error(...args);
-    }
-  }, [isDev]);
+  const debugInfo = useCallback((..._args: unknown[]) => {}, []);
+  const debugError = useCallback((..._args: unknown[]) => {}, []);
 
   useEffect(() => {
     const selectedDate = searchParams.get("date");
     const packageFromQuery = searchParams.get("package");
+    const assistantFlow = searchParams.get("assistant") === "1";
     const normalizedPackageId = normalizePackageId(packageFromQuery, allowedPackageIds);
+    const queryEventType = searchParams.get("eventType")?.trim() || "";
+    const queryGuestCount = searchParams.get("guestCount")?.trim() || "";
+    const queryVenueName = searchParams.get("venue")?.trim() || "";
+    const queryNotes = searchParams.get("notes")?.trim() || "";
 
-    if (isDev) {
-      debugInfo("[booking-flow][dev] package query detected", {
-        raw: packageFromQuery,
-        normalized: normalizedPackageId
-      });
+    let storagePrefill: Partial<BookingRequest> = {};
+    if (typeof window !== "undefined") {
+      const raw = window.sessionStorage.getItem(CHAT_BOOKING_PREFILL_STORAGE_KEY);
+      if (raw) {
+        try {
+          storagePrefill = JSON.parse(raw) as Partial<BookingRequest>;
+        } catch {
+          window.sessionStorage.removeItem(CHAT_BOOKING_PREFILL_STORAGE_KEY);
+        }
+      }
     }
+
+    const nextDate = selectedDate || storagePrefill.eventDate || "";
+    const nextEventType = queryEventType || storagePrefill.eventType || "";
+    const nextVenueName = queryVenueName || storagePrefill.venueName || "";
+    const nextGuestCount = queryGuestCount ? Number(queryGuestCount) : storagePrefill.guestCount;
+    const nextNotes = storagePrefill.specialNotes || queryNotes || "";
 
     setForm((prev) => ({
       ...prev,
-      packageId: normalizedPackageId ?? undefined
+      packageId: normalizedPackageId ?? prev.packageId,
+      eventDate: prev.eventDate || nextDate,
+      eventType: prev.eventType || nextEventType,
+      venueName: prev.venueName || nextVenueName,
+      guestCount: prev.guestCount || nextGuestCount,
+      specialNotes: prev.specialNotes || nextNotes
     }));
 
-    if (!selectedDate) return;
-    const parsed = parseIsoDate(selectedDate);
-    if (!parsed) return;
-    setSelectedIso((prev) => (prev ? prev : selectedDate));
-    setForm((prev) => (prev.eventDate ? prev : { ...prev, eventDate: selectedDate }));
+    if (!nextDate) {
+      return;
+    }
+
+    const parsed = parseIsoDate(nextDate);
+    if (!parsed) {
+      return;
+    }
+
+    setSelectedIso((prev) => (prev ? prev : nextDate));
     setMonthDate(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
-  }, [allowedPackageIds, debugInfo, isDev, searchParams]);
+
+    if (assistantFlow) {
+      setStep((prev) => (prev < 3 ? 3 : prev));
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(CHAT_BOOKING_PREFILL_STORAGE_KEY);
+      }
+    }
+  }, [allowedPackageIds, searchParams]);
 
   const todayIso = useMemo(() => toIsoDateLocal(new Date()), []);
 
@@ -118,7 +143,7 @@ export function BookingForm({ initialPublicData }: BookingFormProps) {
     setStatus,
     setLoading,
     routerPush: (url) => router.push(url),
-    isDev,
+    isDev: false,
     debugInfo
   });
 

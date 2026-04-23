@@ -27,6 +27,15 @@ export const metadata: Metadata = {
   description: "Booking inquiry success confirmation for DJ Press International."
 };
 
+function maskBookingId(id: string) {
+  const trimmed = id.trim();
+  if (trimmed.length <= 8) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}`;
+}
+
 export default async function ThankYouPage({
   searchParams
 }: {
@@ -79,7 +88,7 @@ export default async function ThankYouPage({
           <p className="mt-3 max-w-3xl text-slate-300">
             Your inquiry has been received and is under review. Expect a response with availability details and next steps within 24 hours.
           </p>
-          <p className="mt-4 text-sm font-semibold text-luxeBlue">Reference ID: {bookingId}</p>
+          <p className="mt-4 text-sm font-semibold text-luxeBlue">Reference ID: {bookingId === "Pending Assignment" ? bookingId : maskBookingId(bookingId)}</p>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             <article className="stat-pill">

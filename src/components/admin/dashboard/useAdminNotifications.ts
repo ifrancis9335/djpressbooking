@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminNotification } from "../../../types/notification";
+import { fetchAdminNotifications, markAdminNotificationRead, openAdminNotificationsStream } from "../../../lib/admin/notifications-admin";
 
 interface UseAdminNotificationsArgs {
   enabled: boolean;
@@ -9,15 +10,6 @@ interface UseAdminNotificationsArgs {
 }
 
 type ConnectionState = "connecting" | "live" | "disconnected";
-
-async function parseResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
-  if (!response.ok) {
-    const message = payload && typeof payload === "object" && "message" in payload ? payload.message : undefined;
-    throw new Error(message || "Request failed");
-  }
-  return payload as T;
-}
 
 export function useAdminNotifications({ enabled, getAdminCsrfHeader }: UseAdminNotificationsArgs) {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
@@ -32,8 +24,7 @@ export function useAdminNotifications({ enabled, getAdminCsrfHeader }: UseAdminN
     }
 
     try {
-      const response = await fetch("/api/admin/notifications", { cache: "no-store" });
-      const payload = await parseResponse<{ notifications: AdminNotification[] }>(response);
+      const payload = await fetchAdminNotifications();
       setNotifications(payload.notifications || []);
       setError(null);
     } catch (loadError) {
@@ -44,12 +35,8 @@ export function useAdminNotifications({ enabled, getAdminCsrfHeader }: UseAdminN
   const markAsRead = useCallback(
     async (id: string) => {
       try {
-        const response = await fetch("/api/admin/notifications", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getAdminCsrfHeader() },
-          body: JSON.stringify({ id })
-        });
-        const payload = await parseResponse<{ notification: AdminNotification }>(response);
+        void getAdminCsrfHeader();
+        const payload = await markAdminNotificationRead(id);
         setNotifications((prev) => prev.map((item) => (item.id === id ? payload.notification : item)));
       } catch (markError) {
         setError(markError instanceof Error ? markError.message : "Unable to update notification");
@@ -69,7 +56,7 @@ export function useAdminNotifications({ enabled, getAdminCsrfHeader }: UseAdminN
     void loadNotifications();
     setConnectionState("connecting");
 
-    const source = new EventSource("/api/admin/notifications/stream");
+  const source = openAdminNotificationsStream();
 
     source.addEventListener("ready", () => {
       setConnectionState("live");

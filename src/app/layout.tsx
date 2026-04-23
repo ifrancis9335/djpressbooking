@@ -3,6 +3,8 @@ import "./globals.css";
 import { SiteHeader } from "../components/layout/site-header";
 import { SiteFooter } from "../components/layout/site-footer";
 import { MobileBookCta } from "../components/layout/mobile-book-cta";
+import { PublicChatWidget } from "../components/chat/public-chat-widget";
+import { AppChrome } from "../components/layout/app-chrome";
 import { getManagedImageUrl } from "../lib/media";
 import { getPublicSiteData } from "../lib/site-settings";
 import { getPublicBaseUrl } from "../lib/public-url";
@@ -93,22 +95,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: JSON.stringify(organizationSchema)
           }}
         />
-        <SiteHeader
-          branding={branding}
-          phone={siteContact.phone}
-          phoneHref={siteContact.phoneHref}
-          primaryCtaLabel={primaryCtaLabel}
-          secondaryCtaLabel={secondaryCtaLabel}
-        />
-        {children}
-        <SiteFooter
-          branding={branding}
-          siteContact={siteContact}
-          packageTiers={packageTiers}
-          serviceAreaLine={siteSettings.serviceAreaLine}
-          primaryCtaLabel={primaryCtaLabel}
-        />
-        <MobileBookCta label={primaryCtaLabel} />
+        <AppChrome
+          header={
+            <SiteHeader
+              branding={branding}
+              phone={siteContact.phone}
+              phoneHref={siteContact.phoneHref}
+              primaryCtaLabel={primaryCtaLabel}
+              secondaryCtaLabel={secondaryCtaLabel}
+            />
+          }
+          chatWidget={<PublicChatWidget siteName={branding.siteName} packageTiers={packageTiers} />}
+          footer={
+            <SiteFooter
+              branding={branding}
+              siteContact={siteContact}
+              packageTiers={packageTiers}
+              serviceAreaLine={siteSettings.serviceAreaLine}
+              primaryCtaLabel={primaryCtaLabel}
+            />
+          }
+          mobileBookCta={<MobileBookCta label={primaryCtaLabel} />}
+        >
+          {children}
+        </AppChrome>
       </body>
     </html>
   );

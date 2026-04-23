@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { blockDate, getBlockedDateByEventDate } from "../../../../../lib/availability-db";
 import { requireAdminCsrf, requireAdminRequest } from "../../../../../lib/admin-auth";
 import { isoDateSchema } from "../../../../../lib/validators/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const blockDateBodySchema = z.object({
+  date: isoDateSchema,
+  note: z.string().trim().max(500).optional()
+});
 
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
@@ -21,23 +27,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json().catch(() => null)) as { date?: string; note?: string } | null;
-    if (!body || typeof body !== "object") {
-      return NextResponse.json({ message: "Invalid JSON payload" }, { status: 400 });
+    const body = (await request.json().catch(() => null)) as unknown;
+    const parsedBody = blockDateBodySchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { ok: false, message: "Invalid request.", errors: parsedBody.error.flatten() },
+        { status: 400 }
+      );
     }
-    const parsed = isoDateSchema.safeParse(body?.date);
 
-    if (!parsed.success) {
-      return NextResponse.json({ message: "Valid date is required (YYYY-MM-DD)." }, { status: 400 });
-    }
+    const parsed = parsedBody.data;
 
-    const current = await getBlockedDateByEventDate(parsed.data);
+    const current = await getBlockedDateByEventDate(parsed.date);
     if (current?.status === "blocked") {
-      console.info("[admin-availability] block_exists", { requestId, date: parsed.data });
+      console.info("[admin-availability] block_exists", { requestId, date: parsed.date });
       return NextResponse.json({ message: "Date is already blocked", blockedDate: current }, { status: 409 });
     }
 
-    const blockedDate = await blockDate(parsed.data, body?.note);
+    const blockedDate = await blockDate(parsed.date, parsed.note);
     revalidatePath("/availability");
     revalidatePath("/booking");
     console.info("[admin-availability] block_success", {

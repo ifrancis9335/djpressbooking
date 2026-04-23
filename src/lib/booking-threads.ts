@@ -4,13 +4,14 @@ import { getServerFirestore } from "./firebase/admin";
 import { Booking } from "../types/booking";
 import { BookingMessage, BookingMessageSenderType, BookingReplyTokenPayload } from "../types/booking-thread";
 import { getBookingById } from "./bookings";
+import { getCustomerAccessTokenSecret } from "./security/secret-resolver";
 
 const BOOKINGS_COLLECTION = "bookings";
 const MESSAGES_SUBCOLLECTION = "messages";
 const REPLY_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 14;
 
 function getReplySecret() {
-  return process.env.ADMIN_API_KEY || process.env.ADMIN_PASSWORD || "";
+  return getCustomerAccessTokenSecret();
 }
 
 function toBase64Url(value: string) {

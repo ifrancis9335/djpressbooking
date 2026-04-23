@@ -1,0 +1,306 @@
+{
+  "desktop": [
+    {
+      "route": "/",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 1900,
+        "scrollHeight": 1900
+      },
+      "after": {
+        "clientHeight": 4700,
+        "scrollHeight": 4700
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/services",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 1064,
+        "scrollHeight": 1064
+      },
+      "after": {
+        "clientHeight": 3864,
+        "scrollHeight": 3864
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/packages",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 1636,
+        "scrollHeight": 1654
+      },
+      "after": {
+        "clientHeight": 4436,
+        "scrollHeight": 4436
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/availability",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 852,
+        "scrollHeight": 852
+      },
+      "after": {
+        "clientHeight": 3652,
+        "scrollHeight": 3652
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/gallery",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 588,
+        "scrollHeight": 588
+      },
+      "after": {
+        "clientHeight": 3388,
+        "scrollHeight": 3388
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/reviews",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 1046,
+        "scrollHeight": 1046
+      },
+      "after": {
+        "clientHeight": 3846,
+        "scrollHeight": 3846
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/about",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 479,
+        "scrollHeight": 479
+      },
+      "after": {
+        "clientHeight": 3279,
+        "scrollHeight": 3279
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/faq",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 888,
+        "scrollHeight": 888
+      },
+      "after": {
+        "clientHeight": 3688,
+        "scrollHeight": 3688
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/contact",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 548,
+        "scrollHeight": 548
+      },
+      "after": {
+        "clientHeight": 3348,
+        "scrollHeight": 3348
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/booking-history",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 120,
+        "scrollHeight": 120
+      },
+      "after": {
+        "clientHeight": 2920,
+        "scrollHeight": 2920
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/admin",
+      "shellType": "other",
+      "ownerSelector": "document.scrollingElement",
+      "before": {
+        "clientHeight": 720,
+        "scrollHeight": 720
+      },
+      "after": {
+        "clientHeight": 720,
+        "scrollHeight": 3520
+      },
+      "overflowForced": true,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": null,
+      "wheelScrollSuccess": false
+    }
+  ],
+  "mobile": [
+    {
+      "route": "/availability",
+      "shellType": "public",
+      "ownerSelector": ".public-shell-viewport",
+      "before": {
+        "clientHeight": 1224,
+        "scrollHeight": 1224
+      },
+      "after": {
+        "clientHeight": 4024,
+        "scrollHeight": 4024
+      },
+      "overflowForced": false,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": {
+        "btnStyle": {
+          "display": "inline",
+          "visibility": "visible"
+        },
+        "navStructured": false
+      },
+      "wheelScrollSuccess": false
+    },
+    {
+      "route": "/admin",
+      "shellType": "other",
+      "ownerSelector": "document.scrollingElement",
+      "before": {
+        "clientHeight": 664,
+        "scrollHeight": 664
+      },
+      "after": {
+        "clientHeight": 664,
+        "scrollHeight": 3464
+      },
+      "overflowForced": true,
+      "progScrollSuccess": false,
+      "overlays": 0,
+      "navInfo": null,
+      "wheelScrollSuccess": false
+    }
+  ]
+}

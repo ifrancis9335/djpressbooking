@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Booking } from "../../../types/booking";
-import { readCookieValue } from "../../../utils/csrf";
+import { sendAdminDirectEmail } from "../../../lib/admin/communications-admin";
 
 interface AdminDirectEmailComposerProps {
   booking: Booking;
@@ -10,43 +10,6 @@ interface AdminDirectEmailComposerProps {
 
 function defaultSubject(eventDate: string) {
   return `Update for your DJ Press booking on ${eventDate}`;
-}
-
-async function callDirectEmail(
-  bookingId: string,
-  payload: { to: string; subject: string; message: string }
-): Promise<{ ok: true; message: string; id?: string }> {
-  let response: Response;
-  try {
-    response = await fetch(`/api/admin/bookings/${bookingId}/direct-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": readCookieValue("dj_admin_csrf")
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch {
-    throw new Error("Network error — could not reach the server.");
-  }
-
-  let data: { ok?: boolean; message?: string; id?: string } | null = null;
-  try {
-    data = (await response.json()) as { ok?: boolean; message?: string; id?: string };
-  } catch {
-    // body was not JSON
-  }
-
-  if (!response.ok) {
-    const reason = data?.message ?? `Server error (${response.status})`;
-    throw new Error(reason);
-  }
-
-  return {
-    ok: true,
-    message: data?.message ?? "Email sent successfully.",
-    ...(data?.id ? { id: data.id } : {})
-  };
 }
 
 export function AdminDirectEmailComposer({ booking }: AdminDirectEmailComposerProps) {
@@ -65,17 +28,15 @@ export function AdminDirectEmailComposer({ booking }: AdminDirectEmailComposerPr
     setError(null);
 
     try {
-      const result = await callDirectEmail(booking.id, {
+      const result = await sendAdminDirectEmail(booking.id, {
         to: recipient,
         subject,
         message: body
       });
-      console.log("[direct-email] success:", result);
       setSuccess(result.message + (result.id ? ` (ID: ${result.id})` : ""));
       setBody("");
     } catch (sendError) {
       const msg = sendError instanceof Error ? sendError.message : "Unable to send email.";
-      console.error("[direct-email] error:", msg);
       setError(msg);
     } finally {
       setSending(false);

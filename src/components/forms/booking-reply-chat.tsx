@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookingMessage } from "../../types/booking-thread";
 
+type PublicBookingMessage = Omit<BookingMessage, "bookingId">;
+
 interface BookingReplyChatProps {
   token: string;
-  initialMessages: BookingMessage[];
+  initialMessages: PublicBookingMessage[];
 }
 
 interface ThreadPayload {
-  messages: BookingMessage[];
+  messages: PublicBookingMessage[];
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -34,14 +36,14 @@ function formatTimestamp(value: string) {
 }
 
 export function BookingReplyChat({ token, initialMessages }: BookingReplyChatProps) {
-  const [messages, setMessages] = useState<BookingMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<PublicBookingMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const latestMessagePreview = useMemo(() => {
     if (messages.length === 0) {
@@ -83,11 +85,12 @@ export function BookingReplyChat({ token, initialMessages }: BookingReplyChatPro
   }, [loadMessages]);
 
   useEffect(() => {
-    if (!bottomRef.current) {
-      return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    if (isNearBottom) {
+      container.scrollTop = container.scrollHeight;
     }
-
-    bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
 
   const sendReply = async () => {
@@ -119,7 +122,7 @@ export function BookingReplyChat({ token, initialMessages }: BookingReplyChatPro
       <p className="mt-1 text-xs text-slate-500">{polling ? "Checking for new messages..." : "Auto-refreshing every 5s"}</p>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/20">
-        <div className="max-h-[380px] min-h-[260px] overflow-y-auto p-3">
+        <div ref={scrollContainerRef} className="max-h-[380px] min-h-[260px] overflow-y-auto p-3">
           {loading ? <p className="text-sm text-slate-300">Loading conversation...</p> : null}
           {!loading && messages.length === 0 ? <p className="text-sm text-slate-400">No messages yet.</p> : null}
           <div className="grid gap-2">
@@ -143,7 +146,6 @@ export function BookingReplyChat({ token, initialMessages }: BookingReplyChatPro
                 </article>
               );
             })}
-            <div ref={bottomRef} />
           </div>
         </div>
 

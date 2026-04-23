@@ -1,9 +1,9 @@
 "use client";
 
 import { ChangeEvent, useEffect, useState } from "react";
+import { deleteAdminImage, uploadAdminImage } from "../../lib/admin/communications-admin";
 import { isManagedUploadUrl } from "../../lib/media";
 import { ManagedImageAsset } from "../../types/site-content";
-import { readCookieValue } from "../../utils/csrf";
 import { FallbackImage } from "../ui/fallback-image";
 
 interface AdminImageFieldProps {
@@ -31,7 +31,6 @@ export function AdminImageField({
   onChange,
   onLegacyClear
 }: AdminImageFieldProps) {
-  const getAdminCsrfHeader = () => ({ "X-CSRF-Token": readCookieValue("dj_admin_csrf") });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -72,21 +71,7 @@ export function AdminImageField({
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("scope", scope);
-      formData.append("title", uploadTitle);
-
-      const response = await fetch("/api/admin/uploads", {
-        method: "POST",
-        headers: getAdminCsrfHeader(),
-        body: formData
-      });
-
-      const payload = (await response.json().catch(() => null)) as { asset?: ManagedImageAsset; message?: string } | null;
-      if (!response.ok || !payload?.asset) {
-        throw new Error(payload?.message || "Upload failed");
-      }
+      const payload = await uploadAdminImage(selectedFile, scope, uploadTitle);
 
       onChange(payload.asset);
       setSelectedFile(null);
@@ -108,15 +93,7 @@ export function AdminImageField({
 
     try {
       if (value?.url && isManagedUploadUrl(value.url)) {
-        const response = await fetch("/api/admin/uploads", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json", ...getAdminCsrfHeader() },
-          body: JSON.stringify({ url: value.url })
-        });
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        if (!response.ok) {
-          throw new Error(payload?.message || "Unable to remove uploaded file");
-        }
+        await deleteAdminImage(value.url);
       }
 
       onChange(null);
@@ -132,7 +109,7 @@ export function AdminImageField({
     }
   };
 
-  const previewSrc = localPreviewUrl || value?.url || legacyUrl || fallbackSrc;
+  const previewSrc = value?.url || legacyUrl || localPreviewUrl || fallbackSrc;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-3">

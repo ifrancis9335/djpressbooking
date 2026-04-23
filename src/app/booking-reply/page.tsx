@@ -8,6 +8,15 @@ export const metadata: Metadata = {
   description: "Secure customer reply page for DJ Press booking conversations."
 };
 
+function maskBookingId(id: string) {
+  const trimmed = id.trim();
+  if (trimmed.length <= 8) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}`;
+}
+
 interface BookingReplyPageProps {
   searchParams: Promise<{ token?: string }>;
 }
@@ -42,7 +51,7 @@ export default async function BookingReplyPage({ searchParams }: BookingReplyPag
               Secure Booking Thread
             </p>
             <h1 className="mt-4 text-3xl font-bold text-white">Reply About Your Booking</h1>
-            <p className="mt-2 text-slate-300">Booking ID: {booking.id}</p>
+            <p className="mt-2 text-slate-300">Booking reference: {maskBookingId(booking.id)}</p>
             <p className="mt-1 text-slate-300">Event date: {booking.eventDate}</p>
             <p className="mt-1 text-slate-300">Need direct help? <a className="font-semibold text-luxeGold" href={siteContact.phoneHref}>{siteContact.phone}</a></p>
           </section>
