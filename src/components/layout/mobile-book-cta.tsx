@@ -1,27 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-
 interface MobileBookCtaProps {
   label: string;
 }
 
-export function MobileBookCta({ label }: MobileBookCtaProps) {
-  const pathname = usePathname();
-
-  if (
-    pathname.startsWith("/booking") ||
-    pathname.startsWith("/contact") ||
-    pathname.startsWith("/availability") ||
-    pathname.startsWith("/admin")
-  ) {
-    return null;
-  }
-
-  return (
-    <Link href="/booking" className="btn-primary sticky-book">
-      {label}
-    </Link>
-  );
+// Floating mobile book CTA removed — BOOK NOW is available in hero and page sections only.
+// AI assistant is the sole floating interaction element.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function MobileBookCta(_props: MobileBookCtaProps) {
+  return null;
 }

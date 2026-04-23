@@ -57,7 +57,7 @@ export function PublicChatPanel({
     <section
       id="public-chat-panel"
       aria-label="DJ Press AI assistant"
-      className="glass-panel chat-panel-shell relative w-[min(calc(100vw-1.25rem),24rem)] p-2.5 md:w-[23.5rem] md:p-3"
+      className="glass-panel chat-panel-shell relative w-full p-2.5 pt-3 md:w-[23.5rem] md:p-3"
     >
       <button
         type="button"

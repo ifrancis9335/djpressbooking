@@ -211,7 +211,7 @@ export function PublicChatWidget({ siteName, packageTiers }: PublicChatWidgetPro
   }
 
   return (
-    <div className="chat-widget-shell fixed z-50 flex flex-col items-end gap-3">
+    <div className={`chat-widget-shell fixed z-50 flex flex-col items-end gap-3 ${open ? "is-open" : ""}`}>
       {open ? (
         <PublicChatPanel
           siteName={siteName}
@@ -234,7 +234,7 @@ export function PublicChatWidget({ siteName, packageTiers }: PublicChatWidgetPro
           onClose={() => setOpen(false)}
         />
       ) : null}
-      {!open ? <PublicChatLauncher open={open} onClick={() => setOpen(true)} /> : null}
+      {!open ? <PublicChatLauncher open={open} onClick={() => setOpen(true)} className="mobile-utility-ai" /> : null}
     </div>
   );
 }

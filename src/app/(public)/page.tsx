@@ -34,7 +34,7 @@ export default async function HomePage() {
             {/* Services */}
             <Link
               href="/services"
-              className="group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-luxeBlue/10 to-violet-500/5 p-5 transition hover:border-luxeBlue/40 hover:bg-luxeBlue/15"
+              className="group home-nav-tile bg-gradient-to-br from-luxeBlue/10 to-violet-500/5 hover:border-luxeBlue/40 hover:bg-luxeBlue/15"
             >
               <div className="flex flex-col gap-2">
                 <div className="text-2xl">🎵</div>
@@ -46,7 +46,7 @@ export default async function HomePage() {
             {/* Packages */}
             <Link
               href="/packages"
-              className="group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-luxeGold/10 to-amber-500/5 p-5 transition hover:border-luxeGold/40 hover:bg-luxeGold/15"
+              className="group home-nav-tile bg-gradient-to-br from-luxeGold/10 to-amber-500/5 hover:border-luxeGold/40 hover:bg-luxeGold/15"
             >
               <div className="flex flex-col gap-2">
                 <div className="text-2xl">💼</div>
@@ -58,7 +58,7 @@ export default async function HomePage() {
             {/* Availability */}
             <Link
               href="/availability"
-              className="group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-5 transition hover:border-emerald-500/40 hover:bg-emerald-500/15"
+              className="group home-nav-tile bg-gradient-to-br from-emerald-500/10 to-teal-500/5 hover:border-emerald-500/40 hover:bg-emerald-500/15"
             >
               <div className="flex flex-col gap-2">
                 <div className="text-2xl">📅</div>
@@ -70,7 +70,7 @@ export default async function HomePage() {
             {/* Gallery */}
             <Link
               href="/gallery"
-              className="group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/10 to-pink-500/5 p-5 transition hover:border-rose-500/40 hover:bg-rose-500/15"
+              className="group home-nav-tile bg-gradient-to-br from-rose-500/10 to-pink-500/5 hover:border-rose-500/40 hover:bg-rose-500/15"
             >
               <div className="flex flex-col gap-2">
                 <div className="text-2xl">📸</div>
@@ -82,7 +82,7 @@ export default async function HomePage() {
             {/* Reviews */}
             <Link
               href="/reviews"
-              className="group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 p-5 transition hover:border-cyan-500/40 hover:bg-cyan-500/15"
+              className="group home-nav-tile bg-gradient-to-br from-cyan-500/10 to-blue-500/5 hover:border-cyan-500/40 hover:bg-cyan-500/15"
             >
               <div className="flex flex-col gap-2">
                 <div className="text-2xl">⭐</div>
@@ -94,7 +94,7 @@ export default async function HomePage() {
             {/* Contact */}
             <Link
               href="/contact"
-              className="group relative overflow-hidden rounded-xl border border-luxeBlue/40 bg-gradient-to-br from-luxeBlue/20 to-violet-600/10 p-5 transition hover:border-luxeBlue/70 hover:bg-luxeBlue/25"
+              className="group home-nav-tile border-luxeBlue/40 bg-gradient-to-br from-luxeBlue/20 to-violet-600/10 hover:border-luxeBlue/70 hover:bg-luxeBlue/25"
             >
               <div className="flex flex-col gap-2">
                 <div className="text-2xl">💬</div>
