@@ -19,6 +19,19 @@ const PUBLIC_DASHBOARD_ROUTES = new Set([
   "/contact"
 ]);
 
+function shouldRenderPublicChat(pathname: string) {
+  if (pathname.startsWith("/admin")) return false;
+  if (pathname.startsWith("/booking-reply")) return false;
+
+  return !(
+    pathname === "/booking" ||
+    pathname === "/contact" ||
+    pathname === "/availability" ||
+    pathname === "/find-booking" ||
+    pathname === "/booking-history"
+  );
+}
+
 interface AppChromeProps {
   header: ReactNode;
   footer: ReactNode;
@@ -31,6 +44,7 @@ export function AppChrome({ header, footer, chatWidget, mobileBookCta, children 
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
   const isDashboardRoute = PUBLIC_DASHBOARD_ROUTES.has(pathname);
+  const showChatWidget = shouldRenderPublicChat(pathname);
 
   if (isAdminRoute) {
     return <>{children}</>;
@@ -41,7 +55,7 @@ export function AppChrome({ header, footer, chatWidget, mobileBookCta, children 
     return (
       <>
         {children}
-        {chatWidget}
+        {showChatWidget ? chatWidget : null}
         {mobileBookCta}
       </>
     );
@@ -51,7 +65,7 @@ export function AppChrome({ header, footer, chatWidget, mobileBookCta, children 
     <>
       {header}
       {children}
-      {chatWidget}
+      {showChatWidget ? chatWidget : null}
       {footer}
       {mobileBookCta}
     </>

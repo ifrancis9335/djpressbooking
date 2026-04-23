@@ -57,10 +57,7 @@ export function PublicChatComposer({
       onSubmit={submit}
       autoComplete="off"
       className="border-t border-white/10 pt-2"
-      style={{ transform: "translateZ(0)" }}
     >
-      <input type="text" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" />
-      <input type="password" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" />
       <label className="sr-only" htmlFor="djpress-ai-input">Ask DJ Press AI assistant</label>
       <textarea
         ref={textareaRef}
@@ -78,11 +75,11 @@ export function PublicChatComposer({
         placeholder={placeholder}
         maxLength={1200}
         disabled={disabled || sending}
-        autoComplete="new-password"
+        autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
-        inputMode="none"
+        inputMode="text"
         data-form-type="other"
         data-lpignore="true"
         data-1p-ignore="true"
